@@ -5,6 +5,11 @@ from .models import DistributorApplication
 from django.contrib.auth.forms import AuthenticationForm
 from django import forms
 from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth import authenticate
+from django.core.exceptions import ValidationError
+from django.conf import settings
+from django.contrib.auth import authenticate
+from django.utils.html import format_html
 
 User = get_user_model()
 
@@ -16,21 +21,30 @@ ROLE_CHOICES = [
     ("Auditor", "Auditor"),
 ]
 
-class PortalAuthenticationForm(AuthenticationForm):
-    username = forms.CharField(
-        widget=forms.TextInput(attrs={
-            "class": "form-control",
-            "placeholder": "Enter username",
-            "autofocus": "autofocus",
-        })
-    )
-    password = forms.CharField(
-        widget=forms.PasswordInput(attrs={
-            "class": "form-control",
-            "placeholder": "Enter password",
-        })
-    )
 
+class PortalAuthenticationForm(AuthenticationForm):
+    def confirm_login_allowed(self, user):
+        """
+        Override Django default behavior.
+        This is where Django blocks inactive users.
+        """
+        if not user.is_active:
+            admin_email = getattr(settings, "ADMIN_SUPPORT_EMAIL", "admin@yourdomain.com")
+            raise forms.ValidationError(
+                format_html(
+                    'Account disabled. Contact administrator: '
+                    '<a href="mailto:{0}">{0}</a>',
+                    admin_email
+                ),
+                code="inactive",
+            )
+
+    def clean(self):
+        """
+        Let AuthenticationForm handle authentication flow.
+        We do NOT check is_active here anymore.
+        """
+        return super().clean()
 class UserCreateForm(forms.ModelForm):
     role = forms.ChoiceField(choices=ROLE_CHOICES)
     password1 = forms.CharField(widget=forms.PasswordInput, label="Password")
@@ -66,7 +80,9 @@ class UserCreateForm(forms.ModelForm):
 
 
 class UserEditForm(forms.ModelForm):
-    role = forms.ChoiceField(choices=ROLE_CHOICES)
+    class Meta:
+        model = User
+        fields = ["username", "email", "is_active"]  # add your other fields here
 
     class Meta:
         model = User

@@ -3,6 +3,8 @@ from django.contrib.auth import views as auth_views
 from . import views
 from django.urls import reverse_lazy
 from .forms import PortalPasswordResetForm
+from .views import PortalLoginView
+
 
 
 app_name = "portal"
@@ -18,10 +20,10 @@ urlpatterns = [
     path("mfa/qr.png", views.mfa_qr_png, name="mfa_qr_png"),
     path("logout/",auth_views.LogoutView.as_view(next_page=reverse_lazy("portal:login")),
     name="logout",),
-    path("login/",auth_views.LoginView.as_view(template_name="portal/login.html",
-        redirect_authenticated_user=True),
-    name="login",),
-
+    # path("login/",auth_views.LoginView.as_view(template_name="portal/login.html",
+    #     redirect_authenticated_user=True),
+    # name="login",),
+    path("login/", PortalLoginView.as_view(), name="login"),
     path("users/", views.user_list, name="user_list"),
     path("users/create/", views.user_create, name="user_create"),
     path("users/<int:user_id>/edit/", views.user_edit, name="user_edit"),

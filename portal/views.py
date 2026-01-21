@@ -20,6 +20,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from .forms import DistributorApplicationForm
 from .models import DistributorApplication
 from .forms import PortalAuthenticationForm
+from django.contrib.auth.views import LoginView
 def dashboard(request):
     # Temporary placeholders until we add database models
     kpi = {
@@ -310,6 +311,12 @@ def dashboard(request):
     return render(request, "portal/dashboard.html", {"kpi": kpi, "alerts": alerts})
 
 
+class PortalLoginView(LoginView):
+    template_name = "portal/login.html"
+    authentication_form = PortalAuthenticationForm
+
+
+
 
 @login_required
 def qr_control_center(request):
@@ -402,9 +409,16 @@ def portal_login(request):
         if form.is_valid():
             auth_login(request, form.get_user())
             return redirect("portal:dashboard")
-        messages.error(request, "Invalid username or password.")
 
-    return render(request, "portal/auth/login.html", {"form": form})
+        # IMPORTANT: Do NOT overwrite the custom disabled message.
+        # Only add "Invalid username or password" if there are no non-field errors already.
+        if not form.non_field_errors():
+            messages.error(request, "Invalid username or password.")
+
+    # IMPORTANT: This template exists in your tree
+    return render(request, "portal/login.html", {"form": form})
+
+
 def portal_logout(request):
     auth_logout(request)
     messages.info(request, "You have been logged out.")

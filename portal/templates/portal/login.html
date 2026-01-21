@@ -11,13 +11,14 @@
         <div class="text-muted">Sign in to continue.</div>
       </div>
 
-{% if form.non_field_errors %}
-  <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
-{% endif %}
-
 
       <form method="post" novalidate>
         {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger" role="alert">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
 
         <div class="mb-3">
           <label class="form-label">Username</label>

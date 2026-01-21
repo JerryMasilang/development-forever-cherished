@@ -131,6 +131,7 @@ LOGIN_REDIRECT_URL = "/portal/"
 LOGOUT_REDIRECT_URL = "/portal/login/"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "no-reply@forevercherished.local"
+ADMIN_SUPPORT_EMAIL = "admin@yourdomain.com"
 
 
 # Static files (CSS, JavaScript, Images)
@@ -141,4 +142,5 @@ STATIC_URL = '/static/'
 AUTHENTICATION_BACKENDS = [
     "portal.auth_backends.EmailOrUsernameBackend",
     "django.contrib.auth.backends.ModelBackend",
+    "portal.auth_backends.PortalAuthBackend",
 ]
