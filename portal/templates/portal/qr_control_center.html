@@ -1,0 +1,636 @@
+{% extends "portal/base.html" %}
+{% block title %}QR Control Center{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-2 mb-3">
+  <div>
+    <h1 class="h4 mb-1">QR Control Center</h1>
+    <div class="text-muted small">Master list of QR inventory and lifecycle status.</div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="d-flex flex-wrap gap-2">
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalGenerate">
+     <i class="bi bi-plus-lg me-1"></i>Generate
+    </button>
+
+
+    <button class="btn btn-outline-success" id="btnReserve" data-bs-toggle="modal" data-bs-target="#modalReserve" disabled>
+      Reserve
+    </button>
+
+    <button class="btn btn-outline-success" id="btnAssign" data-bs-toggle="modal" data-bs-target="#modalAssign" disabled>
+      Assign
+    </button>
+
+    <button class="btn btn-outline-secondary" id="btnExport">
+      <i class="bi bi-download me-1"></i>Export
+    </button>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-3">
+  <div class="card-body">
+    <form class="row g-2">
+      <div class="col-12 col-md-4">
+        <input class="form-control" placeholder="Search QR UUID / Distributor" />
+      </div>
+
+      <div class="col-6 col-md-3">
+        <select class="form-select">
+          <option value="">Status: All</option>
+          <option>AVAILABLE</option>
+          <option>RESERVED</option>
+          <option>ASSIGNED</option>
+          <option>DISTRIBUTED</option>
+          <option>REGISTERED</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-3">
+        <select class="form-select">
+          <option value="">Distributor: All</option>
+          {% for d in distributors %}
+            <option>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2">
+        <button type="button" class="btn btn-outline-secondary w-100">Apply</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Desktop Table -->
+<div class="card d-none d-md-block">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width:40px;">
+            <input class="form-check-input" type="checkbox" id="checkAll">
+          </th>
+          <th>ITEM NO</th>
+          <th>ID</th>
+          <th>STATUS</th>
+          <th>MEMORIAL STATUS</th>
+          <th>MEMORIAL OF</th>
+          <th>QR ID</th>
+          <th>CUSTODIAN</th>
+          <th>CUSTODIAN ID</th>
+          <th>ENROLLMENT KEY</th>
+          <th>URL</th>
+          <th>ACTIONS</th>
+          <th>DATE GENERATED</th>
+          <th>DATE REGISTERED</th>
+          <th>DATE ASSIGNED</th>
+          <th>ASSIGNED TO</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for qr in qrs %}
+        <tr data-status="{{ qr.status }}">
+          <td>
+            <input class="form-check-input qr-check" type="checkbox" value="{{ qr.qr_id }}">
+          </td>
+
+          <td class="text-muted small">{{ qr.item_no }}</td>
+          <td class="fw-semibold">{{ qr.id_code }}</td>
+
+          <td>
+            <span class="badge bg-secondary">{{ qr.status }}</span>
+          </td>
+          <td>
+            {% if qr.status != "REGISTERED" %}
+              <span class="text-muted">—</span>
+            {% else %}
+              {% if qr.admin_locked %}
+                <span class="badge bg-warning text-dark me-1">Admin Locked</span>
+              {% endif %}
+
+              {% if qr.effective_status == "active" %}
+                <span class="badge bg-success">Active</span>
+              {% else %}
+                <span class="badge bg-secondary">Inactive</span>
+              {% endif %}
+
+              {% if qr.admin_override_status != "none" %}
+                <span class="badge bg-info text-dark ms-1">Admin Override</span>
+              {% endif %}
+            {% endif %}
+          </td>
+
+
+          <td>{{ qr.memorial_of|default:"—" }}</td>
+          <td class="fw-semibold">{{ qr.qr_id }}</td>
+          <td>{{ qr.custodian_name|default:"—" }}</td>
+          <td class="text-muted">{{ qr.custodian_id|default:"—" }}</td>
+          <td class="text-muted">{{ qr.enrollment_key_masked }}</td>
+
+          <td class="text-truncate" style="max-width:220px;">
+  <span class="badge bg-light text-dark border me-1">{{ qr.display_url_label }}</span>
+  <a href="{{ qr.display_url }}" target="_blank" class="text-decoration-none">
+    {{ qr.display_url }}
+  </a>
+</td>
+
+
+          <td>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                <i class="bi bi-three-dots"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><button type="button" class="dropdown-item">View History</button></li>
+                <li>
+                  <button type="button" class="dropdown-item copy-btn" data-copy="{{ qr.display_url }}">
+                    Copy URL
+                  </button>
+                </li>
+
+                <li>
+                  <button type="button" class="dropdown-item copy-btn" data-copy="{{ qr.qr_redirect_url }}">
+                    Copy QR Redirect Link
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    class="dropdown-item view-qr-btn"
+                    data-qr-id="{{ qr.qr_id }}"
+                    data-qr-url="{{ qr.qr_redirect_url }}"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalViewQR"
+                  >
+                    View QR
+                  </button>
+                </li>
+                <li><button type="button" class="dropdown-item">Download QR</button></li>
+
+                {% if qr.status == "AVAILABLE" %}
+                  <li><hr class="dropdown-divider"></li>
+                  <li><button type="button" class="dropdown-item">Reserve</button></li>
+                {% endif %}
+
+                {% if qr.status == "RESERVED" %}
+                  <li><hr class="dropdown-divider"></li>
+                  <li><button type="button" class="dropdown-item">Release Reservation</button></li>
+                  <li><button type="button" class="dropdown-item">Assign to Distributor</button></li>
+                {% endif %}
+
+                {% if qr.status == "ASSIGNED" %}
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#modalReclaim">
+                      Reclaim Assignment
+                    </button>
+                  </li>
+                {% endif %}
+                
+                {% if can_change_status and qr.status == "REGISTERED" %}
+                  <li><hr class="dropdown-divider"></li>
+
+                  <li>
+                    <button
+                      type="button"
+                      class="dropdown-item"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalChangeMemorialStatus"
+                      data-qr-id="{{ qr.qr_id }}"
+                      data-current-override="{{ qr.admin_override_status }}"
+                    >
+                      Change Memorial Status
+                    </button>
+                  </li>
+
+                  {% if qr.admin_locked %}
+                    <li>
+                      <button
+                        type="button"
+                        class="dropdown-item text-warning"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalLockMemorial"
+                        data-qr-id="{{ qr.qr_id }}"
+                        data-target="unlock"
+                      >
+                        Unlock (Allow Custodian)
+                      </button>
+                    </li>
+                  {% else %}
+                    <li>
+                      <button
+                        type="button"
+                        class="dropdown-item text-warning"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalLockMemorial"
+                        data-qr-id="{{ qr.qr_id }}"
+                        data-target="lock"
+                      >
+                        Lock (Prevent Custodian)
+                      </button>
+                    </li>
+                  {% endif %}
+                {% endif %}
+
+
+                {% if qr.status == "REGISTERED" %}
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <a class="dropdown-item" href="{{ qr.memorial_url }}" target="_blank">
+                      View Memorial Page
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </div>
+          </td>
+
+          <td class="text-muted small">{{ qr.date_generated|default:"—" }}</td>
+          <td class="text-muted small">{{ qr.date_registered|default:"—" }}</td>
+          <td class="text-muted small">{{ qr.date_assigned|default:"—" }}</td>
+          <td>{{ qr.assigned_to|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- Mobile Cards -->
+<div class="d-md-none">
+  {% for qr in qrs %}
+  <div class="card mb-2" data-status="{{ qr.status }}">
+    <div class="card-body">
+
+      <div class="d-flex justify-content-between align-items-start gap-2">
+        <div class="text-truncate">
+          <div class="fw-semibold">{{ qr.item_no }} — {{ qr.id_code }}</div>
+          <div class="small text-muted">QR ID: {{ qr.qr_id }}</div>
+        </div>
+        <span class="badge bg-secondary">{{ qr.status }}</span>
+      </div>
+
+      <div class="small mt-2">
+        <div><span class="text-muted">Memorial Of:</span> {{ qr.memorial_of|default:"—" }}</div>
+        <div><span class="text-muted">Custodian:</span> {{ qr.custodian_name|default:"—" }} ({{ qr.custodian_id|default:"—" }})</div>
+        <div><span class="text-muted">Enrollment Key:</span> {{ qr.enrollment_key_masked }}</div>
+        <div class="text-truncate">
+         <span class="text-muted">URL:</span>
+         <span class="badge bg-light text-dark border me-1">{{ qr.display_url_label }}</span>
+           <a href="{{ qr.display_url }}" target="_blank" class="text-decoration-none">{{ qr.display_url }}</a>
+        </div>
+
+
+        <div><span class="text-muted">Generated:</span> {{ qr.date_generated|default:"—" }}</div>
+        <div><span class="text-muted">Assigned:</span> {{ qr.date_assigned|default:"—" }}</div>
+        <div><span class="text-muted">Registered:</span> {{ qr.date_registered|default:"—" }}</div>
+        <div><span class="text-muted">Assigned To:</span> {{ qr.assigned_to|default:"—" }}</div>
+      </div>
+
+      <div class="d-flex gap-2 mt-3">
+        <label class="btn btn-outline-secondary w-100">
+          <input class="form-check-input me-2 qr-check" type="checkbox" value="{{ qr.qr_id }}" autocomplete="off">
+          Select
+        </label>
+
+        <div class="dropdown w-100">
+          <button class="btn btn-outline-secondary w-100" data-bs-toggle="dropdown">
+            Actions
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end w-100">
+            <li><button type="button" class="dropdown-item">View History</button></li>
+            <li><button type="button" class="dropdown-item copy-btn" data-copy="{{ qr.display_url }}">Copy URL</button></li>
+            <li><button type="button" class="dropdown-item copy-btn" data-copy="{{ qr.qr_redirect_url }}">Copy QR Redirect Link</button></li>
+            <li>
+              <button
+                type="button"
+                class="dropdown-item view-qr-btn"
+                data-qr-id="{{ qr.qr_id }}"
+                data-qr-url="{{ qr.qr_redirect_url }}"
+                data-bs-toggle="modal"
+                data-bs-target="#modalViewQR"
+              >
+                View QR
+              </button>
+            </li>
+            <li><button type="button" class="dropdown-item">Download QR</button></li>
+
+            {% if qr.status == "ASSIGNED" %}
+              <li><hr class="dropdown-divider"></li>
+              <li><button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#modalReclaim">Reclaim Assignment</button></li>
+            {% endif %}
+
+            {% if can_change_status and qr.status == "REGISTERED" %}
+            <li><hr class="dropdown-divider"></li>
+
+            <li>
+              <button
+                type="button"
+                class="dropdown-item"
+                data-bs-toggle="modal"
+                data-bs-target="#modalChangeMemorialStatus"
+                data-qr-id="{{ qr.qr_id }}"
+                data-current-override="{{ qr.admin_override_status }}"
+              >
+                Change Memorial Status
+              </button>
+            </li>
+
+            {% if qr.admin_locked %}
+              <li>
+                <button
+                  type="button"
+                  class="dropdown-item text-warning"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalLockMemorial"
+                  data-qr-id="{{ qr.qr_id }}"
+                  data-target="unlock"
+                >
+                  Unlock (Allow Custodian)
+                </button>
+              </li>
+            {% else %}
+              <li>
+                <button
+                  type="button"
+                  class="dropdown-item text-warning"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalLockMemorial"
+                  data-qr-id="{{ qr.qr_id }}"
+                  data-target="lock"
+                >
+                  Lock (Prevent Custodian)
+                </button>
+              </li>
+            {% endif %}
+          {% endif %}
+
+
+            {% if qr.status == "REGISTERED" %}
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{{ qr.memorial_url }}" target="_blank">View Memorial Page</a></li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+
+
+<!-- Reserve -->
+<div class="modal fade" id="modalReserve" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Reserve Selected QRs</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="small text-muted mb-2">Allowed only if selected QRs are AVAILABLE.</div>
+        <label class="form-label">Expires At</label>
+        <input type="datetime-local" class="form-control">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-success">Reserve</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assign -->
+<div class="modal fade" id="modalAssign" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Assign Selected QRs</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="small text-muted mb-2">Allowed only if selected QRs are RESERVED.</div>
+        <label class="form-label">Distributor</label>
+        <select class="form-select">
+          <option value="">Select distributor...</option>
+          {% for d in distributors %}
+            <option>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-success">Assign</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reclaim (Admin Override placeholder) -->
+<div class="modal fade" id="modalReclaim" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger">Reclaim Assignment (Override)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning small mb-2">
+          This is an override action. Reason is required and will be logged.
+        </div>
+        <label class="form-label">Reason (required)</label>
+        <textarea class="form-control" rows="3" placeholder="Explain why you are reclaiming..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger">Confirm Reclaim</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% include "portal/partials/modal_generate_qr.html" %}
+
+<!-- View QR Modal -->
+<div class="modal fade" id="modalViewQR" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">QR Preview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body text-center">
+        <div class="fw-semibold mb-1" id="qrModalId">—</div>
+        <div class="small text-muted mb-3" id="qrModalUrl">—</div>
+
+        <img
+          id="qrModalImg"
+          src=""
+          alt="QR Code"
+          class="img-fluid border rounded p-2"
+          style="max-width: 320px;"
+        >
+
+        <div class="d-grid gap-2 mt-3">
+          <button type="button" class="btn btn-outline-secondary copy-btn" id="qrModalCopyBtn" data-copy="">
+            Copy QR Link
+          </button>
+          <a id="qrModalOpenBtn" class="btn btn-success" href="#" target="_blank">
+            Open Link
+          </a>
+        </div>
+
+        <div class="small text-muted mt-2">
+          This QR encodes the stable redirect link.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Change Memorial Status (Admin/Manager) -->
+<div class="modal fade" id="modalChangeMemorialStatus" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="changeStatusForm">
+      <div class="modal-header">
+        <h5 class="modal-title">Change Memorial Status (Admin Override)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert alert-warning small mb-2">
+          This is an override action. Reason is required and will be logged.
+        </div>
+
+        <div class="mb-2">
+          <div class="small text-muted">QR ID</div>
+          <div class="fw-semibold" id="statusModalQrId">—</div>
+        </div>
+
+        <label class="form-label mt-2">Override Status</label>
+        <select class="form-select" id="overrideSelect" required>
+          <option value="none">No override (follow Custodian)</option>
+          <option value="active">Force Active</option>
+          <option value="inactive">Force Inactive</option>
+        </select>
+
+        <label class="form-label mt-3">Reason (required)</label>
+        <textarea class="form-control" id="statusReason" rows="3" required placeholder="Explain why..."></textarea>
+
+        <div class="form-text">
+          Prototype only: will connect to a POST endpoint later.
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" type="button" id="btnConfirmStatusChange">Confirm Change</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- Lock / Unlock Memorial (Admin/Manager) -->
+<div class="modal fade" id="modalLockMemorial" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="lockForm">
+      <div class="modal-header">
+        <h5 class="modal-title" id="lockModalTitle">Lock Memorial</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert alert-warning small mb-2">
+          Locking prevents the Custodian from changing activation status until unlocked.
+        </div>
+
+        <div class="mb-2">
+          <div class="small text-muted">QR ID</div>
+          <div class="fw-semibold" id="lockModalQrId">—</div>
+        </div>
+
+        <label class="form-label mt-2">Reason (required)</label>
+        <textarea class="form-control" id="lockReason" rows="3" required placeholder="Explain why..."></textarea>
+
+        <div class="form-text">
+          Prototype only: will connect to a POST endpoint later.
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-warning" type="button" id="btnConfirmLock">Confirm</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+
+<script>
+  // Change Status modal: populate QR ID + current override
+  const modalChangeMemorialStatus = document.getElementById("modalChangeMemorialStatus");
+  modalChangeMemorialStatus?.addEventListener("show.bs.modal", function (event) {
+    const btn = event.relatedTarget;
+    const qrId = btn.getAttribute("data-qr-id");
+    const currentOverride = btn.getAttribute("data-current-override") || "none";
+
+    document.getElementById("statusModalQrId").textContent = qrId;
+    document.getElementById("overrideSelect").value = currentOverride;
+    document.getElementById("statusReason").value = "";
+  });
+
+  // Lock modal: populate QR ID + lock/unlock title
+  const modalLockMemorial = document.getElementById("modalLockMemorial");
+  modalLockMemorial?.addEventListener("show.bs.modal", function (event) {
+    const btn = event.relatedTarget;
+    const qrId = btn.getAttribute("data-qr-id");
+    const target = btn.getAttribute("data-target"); // lock/unlock
+
+    document.getElementById("lockModalQrId").textContent = qrId;
+    document.getElementById("lockReason").value = "";
+
+    const title = document.getElementById("lockModalTitle");
+    const confirmBtn = document.getElementById("btnConfirmLock");
+
+    if (target === "unlock") {
+      title.textContent = "Unlock Memorial";
+      confirmBtn.textContent = "Confirm Unlock";
+    } else {
+      title.textContent = "Lock Memorial";
+      confirmBtn.textContent = "Confirm Lock";
+    }
+
+    // store target for later DB wiring
+    confirmBtn.dataset.target = target;
+    confirmBtn.dataset.qrId = qrId;
+  });
+
+  // Prototype-only handlers (backend later)
+  document.getElementById("btnConfirmStatusChange")?.addEventListener("click", function () {
+    const reason = document.getElementById("statusReason").value.trim();
+    if (!reason) return alert("Reason is required.");
+    alert("Prototype only: will connect to POST endpoint later.");
+  });
+
+  document.getElementById("btnConfirmLock")?.addEventListener("click", function () {
+    const reason = document.getElementById("lockReason").value.trim();
+    if (!reason) return alert("Reason is required.");
+    alert("Prototype only: will connect to POST endpoint later.");
+  });
+</script>
+
+
+
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "portal/base.html" %}
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 mb-1">User Management</h1>
+    <div class="text-muted small">Manage portal users, roles, and access.</div>
+  </div>
+
+  {% if is_admin or is_manager %}
+  <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCreateUser">
+    <i class="bi bi-person-plus me-1"></i> Create User
+  </button>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>MFA</th>
+          <th style="width:160px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td class="fw-semibold">{{ u.email }}</td>
+
+          <td>
+            <span class="badge bg-secondary">{{ u.profile.role }}</span>
+          </td>
+
+          <td>
+            {% if u.is_active %}
+              <span class="badge bg-success">Active</span>
+            {% else %}
+              <span class="badge bg-danger">Inactive</span>
+            {% endif %}
+          </td>
+
+          <td>
+            {% if u.otpdevice_set.exists %}
+              <span class="badge bg-success">Enabled</span>
+            {% else %}
+              <span class="badge bg-warning text-dark">Not Enrolled</span>
+            {% endif %}
+          </td>
+
+          <td>

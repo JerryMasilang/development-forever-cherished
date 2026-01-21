@@ -1,0 +1,205 @@
+{% extends "portal/base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-2 mb-3">
+  <div>
+    <h1 class="h4 mb-1">Dashboard</h1>
+    <div class="text-muted small">Operational overview of QR inventory and activity.</div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a href="{% url 'portal:qr_control_center' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-qr-code me-1"></i>QR Control Center
+    </a>
+    
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalGenerate">
+  <i class="bi bi-plus-lg me-1"></i>Generate QR
+</button>
+
+
+  </div>
+</div>
+
+<!-- KPI Cards (Operational Control Row) -->
+<div class="row g-3 mb-3">
+
+  <div class="col-6 col-lg-3">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div class="text-muted small">AVAILABLE</div>
+          <i class="bi bi-box-seam text-muted"></i>
+        </div>
+        <div class="display-6 fw-semibold mb-0">{{ kpi.available|default:0 }}</div>
+        <div class="small text-muted">Ready for reservation</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div class="text-muted small">RESERVED</div>
+          <i class="bi bi-bookmark-check text-muted"></i>
+        </div>
+        <div class="display-6 fw-semibold mb-0">{{ kpi.reserved|default:0 }}</div>
+        <div class="small text-muted">Held for assignment</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div class="text-muted small">ASSIGNED</div>
+          <i class="bi bi-person-check text-muted"></i>
+        </div>
+        <div class="display-6 fw-semibold mb-0">{{ kpi.assigned|default:0 }}</div>
+        <div class="small text-muted">Owned by distributors</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div class="text-muted small">DISTRIBUTED</div>
+          <i class="bi bi-bag-check text-muted"></i>
+        </div>
+        <div class="display-6 fw-semibold mb-0">{{ kpi.distributed|default:0 }}</div>
+        <div class="small text-muted">Sold / issued to customer</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Informational Row (Not Operational KPIs) -->
+<div class="row g-3 mb-3">
+
+  <!-- SYSTEM INFO: TOTAL GENERATED -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100 shadow-sm border-0">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="text-muted small">SYSTEM INFO</div>
+            <div class="fw-semibold">TOTAL GENERATED</div>
+          </div>
+          <i class="bi bi-stack text-muted"></i>
+        </div>
+
+        <div class="display-6 fw-semibold mb-0">{{ kpi.total_generated|default:0 }}</div>
+        <div class="small text-muted">All QR codes ever generated in the Portal</div>
+
+        <div class="mt-2 small text-muted">
+          Informational only — not tied to lifecycle actions.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WEBSITE OUTCOME: REGISTERED -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100 shadow-sm border-0">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="text-muted small">WEBSITE OUTCOME</div>
+            <div class="fw-semibold">REGISTERED</div>
+          </div>
+          <i class="bi bi-check-circle text-muted"></i>
+        </div>
+
+        <div class="display-6 fw-semibold mb-0">{{ kpi.registered|default:0 }}</div>
+        <div class="small text-muted">Activated on memorial website</div>
+
+        <div class="mt-2 small text-muted">
+          Informational only — registration happens on the Website.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="row g-3">
+  <!-- Alerts / Notifications -->
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-white">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="fw-semibold"><i class="bi bi-bell me-2"></i>Portal Alerts</div>
+          <a class="small text-decoration-none" href="#">View all</a>
+        </div>
+      </div>
+      <div class="card-body">
+
+        {% if alerts %}
+          <ul class="list-group list-group-flush">
+            {% for a in alerts %}
+              <li class="list-group-item px-0">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <div class="fw-semibold">{{ a.title }}</div>
+                    <div class="text-muted small">{{ a.message }}</div>
+                  </div>
+                  <div class="text-muted small">{{ a.time }}</div>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="text-muted small">
+            No alerts right now.
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-lightning-charge me-2"></i>Quick Actions
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+
+          <a class="btn btn-outline-secondary" href="{% url 'portal:qr_control_center' %}">
+            <i class="bi bi-qr-code me-2"></i>Open QR Control Center
+          </a>
+
+          <button class="btn btn-success">
+            <i class="bi bi-plus-lg me-2"></i>Generate QR (Bulk / Single)
+          </button>
+
+          <a class="btn btn-outline-secondary" href="#">
+            <i class="bi bi-bookmark-check me-2"></i>Manage Reservations
+          </a>
+
+          <a class="btn btn-outline-secondary" href="#">
+            <i class="bi bi-bar-chart me-2"></i>View Reports
+          </a>
+
+        </div>
+
+        <hr>
+
+        <div class="small text-muted">
+          Note: Override actions (e.g., reclaim assignment) are not performed here — use the QR Control Center.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% include "portal/partials/modal_generate_qr.html" %}
+
+{% endblock %}

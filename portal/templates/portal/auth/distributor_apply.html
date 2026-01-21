@@ -1,0 +1,21 @@
+{% extends "portal/base_auth.html" %}
+{% block content %}
+<div class="container py-5" style="max-width:520px;">
+  <h3 class="mb-2">Distributor Application</h3>
+  <p class="text-muted">Submit details so the Admin can create your portal account.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-2">Full Name {{ form.full_name }}</div>
+    <div class="mb-2">Email {{ form.email }}</div>
+    <div class="mb-2">Mobile {{ form.mobile }}</div>
+    <div class="mb-2">Company Name {{ form.company_name }}</div>
+    <div class="mb-2">Location {{ form.location }}</div>
+    <div class="mb-2">Notes {{ form.notes }}</div>
+
+    <button class="btn btn-success w-100 mt-3">Submit Application</button>
+  </form>
+
+  <div class="mt-3"><a href="{% url 'portal:login' %}">Back to login</a></div>
+</div>
+{% endblock %}
