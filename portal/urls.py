@@ -4,7 +4,9 @@ from . import views
 from django.urls import reverse_lazy
 from .forms import PortalPasswordResetForm
 from .views import PortalLoginView
+# SYNC TEST: urls.py multi-file push test
 
+# SYNC TEST: urls.py multi-file push test
 
 
 app_name = "portal"
