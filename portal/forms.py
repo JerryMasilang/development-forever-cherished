@@ -12,6 +12,8 @@ from django.contrib.auth import authenticate
 from django.utils.html import format_html
 # SYNC TEST: forms.py edited locally
 # SYNC TEST: forms.py edited locally
+# SYNC TEST: forms.py edited on GitHub
+# SYNC TEST: forms.py edited on GitHub
 
 
 
