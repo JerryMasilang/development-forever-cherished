@@ -24,12 +24,7 @@ from django.contrib.auth.views import LoginView
 
 
 def dashboard(request):
-    # Temporary placeholders until we add database models
-    # SYNC TEST: views.py edited locally on <date/time>
-
-    # SYNC TEST: views.py multi-file push test
-    # SYNC TEST: views.py multi-file push test
-
+   
     kpi = {
         "available": 0,
         "reserved": 0,
