@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+from django.urls import reverse_lazy
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -122,12 +123,15 @@ USE_I18N = True
 
 USE_TZ = True
 
-LOGIN_URL = "/portal/login/"  # or whatever your login path is
-LOGIN_REDIRECT_URL = "/portal/"
-LOGOUT_REDIRECT_URL = "/portal/login/"
+
+LOGIN_URL = reverse_lazy("portal:login")
+LOGIN_REDIRECT_URL = reverse_lazy("portal:dashboard")
+LOGOUT_REDIRECT_URL = reverse_lazy("portal:login")
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "no-reply@forevercherished.local"
 ADMIN_SUPPORT_EMAIL = "admin@yourdomain.com"
+# Public memorial website base URL (used to build QR destinations)
+PUBLIC_SITE_BASE_URL = "https://forevercherished.online"
 
 
 # Static files (CSS, JavaScript, Images)

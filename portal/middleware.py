@@ -10,13 +10,16 @@ class EnforceMFAMiddleware:
     """
 
     EXEMPT_PATHS = (
-        "/admin",
-        "/portal/mfa/",
-        "/portal/login/",
-        "/portal/logout/",
-        "/static/",
-        "/media/",
-    )
+    "/admin/",
+    "/portal/mfa/",
+    "/portal/login/",
+    "/portal/logout/",
+    "/portal/password-reset/",
+    "/portal/reset/",
+    "/static/",
+    "/media/",
+)
+
 
     def __init__(self, get_response):
         self.get_response = get_response

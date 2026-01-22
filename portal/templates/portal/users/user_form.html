@@ -1,5 +1,4 @@
-{% extends "portal/base.html" %} {% block title %}{% if mode == "create"
-%}Create User{% else %}Edit User{% endif %}{% endblock %} {% block content %}
+{% extends "portal/base.html" %} {% block title %} {% if mode == "create"%}Create User{% else %}Edit User{% endif %}{% endblock %} {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-6">
     <div class="d-flex align-items-center justify-content-between mb-3">
@@ -24,8 +23,7 @@
               value="{{ user_obj.username }}"
               disabled
             />
-            {% else %} {{ form.username }} {% endif %} {% if
-            form.username.errors %}
+            {% else %} {{ form.username }} {% endif %} {% if form.username.errors %}
             <div class="text-danger small">{{ form.username.errors }}</div>
             {% endif %}
           </div>
@@ -67,8 +65,7 @@
           {% endif %}
 
           <button class="btn btn-success w-100">
-            {% if mode == "create" %}Create User{% else %}Save Changes{% endif
-            %}
+            {% if mode == "create" %}Create User{% else %}Save Changes{% endif %}
           </button>
         </form>
       </div>
