@@ -23,6 +23,8 @@ from .forms import PortalAuthenticationForm
 from django.contrib.auth.views import LoginView
 def dashboard(request):
     # Temporary placeholders until we add database models
+    # SYNC TEST: views.py edited locally on <date/time>
+
     kpi = {
         "available": 0,
         "reserved": 0,
