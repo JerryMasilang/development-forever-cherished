@@ -1,6 +1,4 @@
-{% extends "portal/base.html" %}
-{% block title %}User Management{% endblock %}
-
+{% extends "portal/base.html" %} {% block title %}User Management{% endblock %}
 {% block content %}
 <div class="d-flex align-items-center justify-content-between mb-3">
   <div>
@@ -33,16 +31,22 @@
           <td>{{ u.profile.role|default:"N/A" }}</td>
           <td>
             {% if u.is_active %}
-              <span class="badge bg-success">Active</span>
+            <span class="badge bg-success">Active</span>
             {% else %}
-              <span class="badge bg-secondary">Inactive</span>
+            <span class="badge bg-secondary">Inactive</span>
             {% endif %}
           </td>
           <td class="text-end">
-            <a class="btn btn-sm btn-outline-secondary" href="{% url 'portal:user_edit' u.id %}">
+            <a
+              class="btn btn-sm btn-outline-secondary"
+              href="{% url 'portal:user_edit' u.id %}"
+            >
               <i class="bi bi-pencil"></i> Edit
             </a>
-            <a class="btn btn-sm btn-outline-danger" href="{% url 'portal:user_reset_mfa' u.id %}">
+            <a
+              class="btn btn-sm btn-outline-danger"
+              href="{% url 'portal:user_reset_mfa' u.id %}"
+            >
               <i class="bi bi-shield-lock"></i> Reset MFA
             </a>
           </td>

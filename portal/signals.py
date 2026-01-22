@@ -9,6 +9,7 @@ from .models import UserProfile
 
 User = get_user_model()
 
+
 @receiver(post_save, sender=User)
 def ensure_profile(sender, instance, created, **kwargs):
     if created:

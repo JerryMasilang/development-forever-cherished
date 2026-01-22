@@ -1,21 +1,24 @@
-{% extends "portal/base.html" %}
-{% block title %}Reset MFA{% endblock %}
-
-{% block content %}
+{% extends "portal/base.html" %} {% block title %}Reset MFA{% endblock %} {%
+block content %}
 <div class="row justify-content-center">
   <div class="col-lg-6">
     <div class="card shadow-sm">
       <div class="card-body p-4">
         <h4 class="mb-2">Reset MFA</h4>
         <p class="text-muted">
-          This will delete all authenticator devices for <b>{{ user_obj.username }}</b>.
-          They will be required to re-enroll on next login.
+          This will delete all authenticator devices for
+          <b>{{ user_obj.username }}</b>. They will be required to re-enroll on
+          next login.
         </p>
 
         <form method="post">
           {% csrf_token %}
           <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary w-50" href="{% url 'portal:user_list' %}">Cancel</a>
+            <a
+              class="btn btn-outline-secondary w-50"
+              href="{% url 'portal:user_list' %}"
+              >Cancel</a
+            >
             <button class="btn btn-danger w-50" type="submit">Reset MFA</button>
           </div>
         </form>

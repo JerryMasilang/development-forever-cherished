@@ -1,15 +1,14 @@
-{% extends "portal/base.html" %}
-{% block title %}{% if mode == "create" %}Create User{% else %}Edit User{% endif %}{% endblock %}
-
-{% block content %}
+{% extends "portal/base.html" %} {% block title %}{% if mode == "create"
+%}Create User{% else %}Edit User{% endif %}{% endblock %} {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-6">
-
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h3 class="mb-0">
         {% if mode == "create" %}Create User{% else %}Edit User{% endif %}
       </h3>
-      <a class="btn btn-outline-secondary" href="{% url 'portal:user_list' %}">Back</a>
+      <a class="btn btn-outline-secondary" href="{% url 'portal:user_list' %}"
+        >Back</a
+      >
     </div>
 
     <div class="card shadow-sm">
@@ -20,23 +19,29 @@
           <div class="mb-3">
             <label class="form-label">Username</label>
             {% if mode == "edit" %}
-              <input class="form-control" value="{{ user_obj.username }}" disabled>
-            {% else %}
-              {{ form.username }}
+            <input
+              class="form-control"
+              value="{{ user_obj.username }}"
+              disabled
+            />
+            {% else %} {{ form.username }} {% endif %} {% if
+            form.username.errors %}
+            <div class="text-danger small">{{ form.username.errors }}</div>
             {% endif %}
-            {% if form.username.errors %}<div class="text-danger small">{{ form.username.errors }}</div>{% endif %}
           </div>
 
           <div class="mb-3">
             <label class="form-label">Email</label>
-            {{ form.email }}
-            {% if form.email.errors %}<div class="text-danger small">{{ form.email.errors }}</div>{% endif %}
+            {{ form.email }} {% if form.email.errors %}
+            <div class="text-danger small">{{ form.email.errors }}</div>
+            {% endif %}
           </div>
 
           <div class="mb-3">
             <label class="form-label">Role</label>
-            {{ form.role }}
-            {% if form.role.errors %}<div class="text-danger small">{{ form.role.errors }}</div>{% endif %}
+            {{ form.role }} {% if form.role.errors %}
+            <div class="text-danger small">{{ form.role.errors }}</div>
+            {% endif %}
           </div>
 
           <div class="form-check mb-3">
@@ -45,27 +50,29 @@
           </div>
 
           {% if mode == "create" %}
-          <hr>
+          <hr />
           <div class="mb-3">
             <label class="form-label">Password</label>
-            {{ form.password1 }}
-            {% if form.password1.errors %}<div class="text-danger small">{{ form.password1.errors }}</div>{% endif %}
+            {{ form.password1 }} {% if form.password1.errors %}
+            <div class="text-danger small">{{ form.password1.errors }}</div>
+            {% endif %}
           </div>
 
           <div class="mb-3">
             <label class="form-label">Confirm Password</label>
-            {{ form.password2 }}
-            {% if form.password2.errors %}<div class="text-danger small">{{ form.password2.errors }}</div>{% endif %}
+            {{ form.password2 }} {% if form.password2.errors %}
+            <div class="text-danger small">{{ form.password2.errors }}</div>
+            {% endif %}
           </div>
           {% endif %}
 
           <button class="btn btn-success w-100">
-            {% if mode == "create" %}Create User{% else %}Save Changes{% endif %}
+            {% if mode == "create" %}Create User{% else %}Save Changes{% endif
+            %}
           </button>
         </form>
       </div>
     </div>
-
   </div>
 </div>
 {% endblock %}

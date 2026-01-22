@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import DistributorApplication
 
+
 # Register your models here.
 @admin.register(DistributorApplication)
 class DistributorApplicationAdmin(admin.ModelAdmin):

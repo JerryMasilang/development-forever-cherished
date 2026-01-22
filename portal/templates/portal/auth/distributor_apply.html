@@ -1,8 +1,9 @@
-{% extends "portal/base_auth.html" %}
-{% block content %}
-<div class="container py-5" style="max-width:520px;">
+{% extends "portal/base_auth.html" %} {% block content %}
+<div class="container py-5" style="max-width: 520px">
   <h3 class="mb-2">Distributor Application</h3>
-  <p class="text-muted">Submit details so the Admin can create your portal account.</p>
+  <p class="text-muted">
+    Submit details so the Admin can create your portal account.
+  </p>
 
   <form method="post">
     {% csrf_token %}

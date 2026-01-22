@@ -1,23 +1,23 @@
-{% extends "portal/base_auth.html" %}
-{% block title %}QR Portal Login{% endblock %}
-
-{% block content %}
-<div class="min-vh-100 d-flex align-items-center justify-content-center bg-light px-3">
-  <div class="card shadow-sm" style="max-width: 430px; width: 100%; border-radius: 14px;">
+{% extends "portal/base_auth.html" %} {% block title %}QR Portal Login{%
+endblock %} {% block content %}
+<div
+  class="min-vh-100 d-flex align-items-center justify-content-center bg-light px-3"
+>
+  <div
+    class="card shadow-sm"
+    style="max-width: 430px; width: 100%; border-radius: 14px"
+  >
     <div class="card-body p-4 p-md-5">
-
       <div class="text-center mb-4">
         <h3 class="mb-1">QR Portal Login</h3>
         <div class="text-muted">Sign in to continue.</div>
       </div>
 
-
       <form method="post" novalidate>
-        {% csrf_token %}
-        {% if form.non_field_errors %}
-          <div class="alert alert-danger" role="alert">
-            {{ form.non_field_errors }}
-          </div>
+        {% csrf_token %} {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">
+          {{ form.non_field_errors }}
+        </div>
         {% endif %}
 
         <div class="mb-3">
@@ -30,7 +30,7 @@
             value="{{ form.username.value|default_if_none:'' }}"
             autofocus
             required
-          >
+          />
         </div>
 
         <div class="mb-2">
@@ -43,30 +43,39 @@
               class="form-control"
               placeholder="Enter password"
               required
+            />
+            <button
+              class="btn btn-outline-secondary"
+              type="button"
+              id="togglePwdBtn"
             >
-            <button class="btn btn-outline-secondary" type="button" id="togglePwdBtn">Show</button>
+              Show
+            </button>
           </div>
           <div class="form-text">Click “Show” to reveal password.</div>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
+        <div
+          class="d-flex justify-content-between align-items-center mt-3 mb-4"
+        >
           <a href="{% url 'portal:password_reset' %}">Forgot password?</a>
-          <a href="{% url 'portal:distributor_apply' %}">Apply as Distributor</a>
+          <a href="{% url 'portal:distributor_apply' %}"
+            >Apply as Distributor</a
+          >
         </div>
 
         <button class="btn btn-success w-100 py-2" type="submit">Login</button>
       </form>
-
     </div>
   </div>
 </div>
 
 <script>
-  (function(){
+  (function () {
     const btn = document.getElementById("togglePwdBtn");
     const pwd = document.getElementById("id_password");
-    if(btn && pwd){
-      btn.addEventListener("click", function(){
+    if (btn && pwd) {
+      btn.addEventListener("click", function () {
         const isHidden = pwd.type === "password";
         pwd.type = isHidden ? "text" : "password";
         btn.textContent = isHidden ? "Hide" : "Show";

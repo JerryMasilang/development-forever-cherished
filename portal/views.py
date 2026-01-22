@@ -21,15 +21,14 @@ from .forms import DistributorApplicationForm
 from .models import DistributorApplication
 from .forms import PortalAuthenticationForm
 from django.contrib.auth.views import LoginView
+
+
 def dashboard(request):
     # Temporary placeholders until we add database models
     # SYNC TEST: views.py edited locally on <date/time>
 
-
-
-# SYNC TEST: views.py multi-file push test
-# SYNC TEST: views.py multi-file push test
-
+    # SYNC TEST: views.py multi-file push test
+    # SYNC TEST: views.py multi-file push test
 
     kpi = {
         "available": 0,
@@ -46,6 +45,7 @@ def dashboard(request):
     ]
 
     return render(request, "portal/dashboard.html", {"kpi": kpi, "alerts": alerts})
+
 
 def qr_png(request, qr_id: str):
     """
@@ -78,7 +78,9 @@ def qr_control_center(request):
         enroll_url = f"{BASE_PUBLIC}/enroll/{qr_id}"
 
         # Memorial URL (after registration)
-        memorial_url = f"{BASE_PUBLIC}/memorial/{memorial_slug}/" if memorial_slug else None
+        memorial_url = (
+            f"{BASE_PUBLIC}/memorial/{memorial_slug}/" if memorial_slug else None
+        )
 
         # Display rule
         if status == "REGISTERED" and memorial_url:
@@ -193,14 +195,11 @@ def qr_control_center(request):
             "date_registered": "2026-01-16 12:30",
             "date_assigned": "2026-01-15 08:10",
             "memorial_slug": "fernando-masilang",  # placeholder
-
             # Website-side preference (custodian)
             "custodian_enabled": True,
-
             # Portal-side override (Admin/Manager)
             # "none" | "active" | "inactive"
             "admin_override_status": "none",
-
             # Portal-side lock switch (Admin/Manager)
             "admin_locked": False,
         },
@@ -208,10 +207,12 @@ def qr_control_center(request):
 
     # Inject URLs + computed memorial status per row
     for row in qrs:
-        qr_redirect_url, enroll_url, memorial_url, display_url, display_url_label = make_urls(
-            row["qr_id"],
-            row["status"],
-            row.get("memorial_slug"),
+        qr_redirect_url, enroll_url, memorial_url, display_url, display_url_label = (
+            make_urls(
+                row["qr_id"],
+                row["status"],
+                row.get("memorial_slug"),
+            )
         )
 
         row["qr_redirect_url"] = qr_redirect_url
@@ -222,7 +223,9 @@ def qr_control_center(request):
 
         custodian_enabled = row.get("custodian_enabled", True)
         admin_override_status = row.get("admin_override_status", "none")
-        row["effective_status"] = compute_effective_status(custodian_enabled, admin_override_status)
+        row["effective_status"] = compute_effective_status(
+            custodian_enabled, admin_override_status
+        )
 
     distributors = ["ABC Funeral Services", "XYZ Lapida Maker", "Guardian Partner"]
 
@@ -253,9 +256,13 @@ def mfa_setup(request):
 
     if confirmed_device:
         # Already registered -> do NOT create new device, just verify code
-        return render(request, "portal/mfa_setup.html", {
-            "mode": "verify",
-        })
+        return render(
+            request,
+            "portal/mfa_setup.html",
+            {
+                "mode": "verify",
+            },
+        )
 
     # Not registered yet -> create/reuse ONE unconfirmed device and show QR
     device = (
@@ -264,13 +271,18 @@ def mfa_setup(request):
         .first()
     )
     if device is None:
-        device = TOTPDevice.objects.create(user=request.user, name="default", confirmed=False)
+        device = TOTPDevice.objects.create(
+            user=request.user, name="default", confirmed=False
+        )
 
-    return render(request, "portal/mfa_setup.html", {
-        "mode": "setup",
-        "qr_url": reverse("portal:mfa_qr_png"),
-    })
-
+    return render(
+        request,
+        "portal/mfa_setup.html",
+        {
+            "mode": "setup",
+            "qr_url": reverse("portal:mfa_qr_png"),
+        },
+    )
 
 
 @login_required
@@ -279,8 +291,12 @@ def mfa_verify(request):
         token = request.POST.get("token", "").strip()
 
         device = (
-            TOTPDevice.objects.filter(user=request.user, confirmed=True).order_by("-id").first()
-            or TOTPDevice.objects.filter(user=request.user, confirmed=False).order_by("-id").first()
+            TOTPDevice.objects.filter(user=request.user, confirmed=True)
+            .order_by("-id")
+            .first()
+            or TOTPDevice.objects.filter(user=request.user, confirmed=False)
+            .order_by("-id")
+            .first()
         )
 
         if not device:
@@ -324,17 +340,20 @@ class PortalLoginView(LoginView):
     authentication_form = PortalAuthenticationForm
 
 
-
-
 @login_required
-def qr_control_center(request):
-    ...
+def qr_control_center(request): ...
 @login_required
 def mfa_qr_png(request):
-# Use existing unconfirmed device or create one if none
-    device = TOTPDevice.objects.filter(user=request.user, confirmed=False).order_by("-id").first()
+    # Use existing unconfirmed device or create one if none
+    device = (
+        TOTPDevice.objects.filter(user=request.user, confirmed=False)
+        .order_by("-id")
+        .first()
+    )
     if device is None:
-        device = TOTPDevice.objects.create(user=request.user, name="default", confirmed=False)
+        device = TOTPDevice.objects.create(
+            user=request.user, name="default", confirmed=False
+        )
 
     # build provisioning uri
     uri = device.config_url  # django-otp provides config_url for TOTPDevice
@@ -346,6 +365,7 @@ def mfa_qr_png(request):
 
 
 User = get_user_model()
+
 
 @admin_required
 def user_list(request):
@@ -364,10 +384,14 @@ def user_create(request):
     else:
         form = UserCreateForm()
 
-    return render(request, "portal/users/user_form.html", {
-        "form": form,
-        "mode": "create",
-    })
+    return render(
+        request,
+        "portal/users/user_form.html",
+        {
+            "form": form,
+            "mode": "create",
+        },
+    )
 
 
 @admin_required
@@ -383,11 +407,15 @@ def user_edit(request, user_id):
     else:
         form = UserEditForm(instance=user_obj)
 
-    return render(request, "portal/users/user_form.html", {
-        "form": form,
-        "mode": "edit",
-        "user_obj": user_obj,
-    })
+    return render(
+        request,
+        "portal/users/user_form.html",
+        {
+            "form": form,
+            "mode": "edit",
+            "user_obj": user_obj,
+        },
+    )
 
 
 @admin_required
@@ -398,13 +426,13 @@ def user_reset_mfa(request, user_id):
         TOTPDevice.objects.filter(user=user_obj).delete()
         messages.success(
             request,
-            f"MFA reset for {user_obj.username}. They must re-enroll on next login."
+            f"MFA reset for {user_obj.username}. They must re-enroll on next login.",
         )
         return redirect("portal:user_list")
 
-    return render(request, "portal/users/user_reset_mfa_confirm.html", {
-        "user_obj": user_obj
-    })
+    return render(
+        request, "portal/users/user_reset_mfa_confirm.html", {"user_obj": user_obj}
+    )
 
 
 def portal_login(request):
@@ -438,7 +466,9 @@ def distributor_apply(request):
         form = DistributorApplicationForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, "Application submitted. We will contact you once reviewed.")
+            messages.success(
+                request, "Application submitted. We will contact you once reviewed."
+            )
             return redirect("portal:login")
     else:
         form = DistributorApplicationForm()

@@ -30,13 +30,13 @@ class EnforceMFAMiddleware:
 
         user = request.user
 
-
         if user.is_authenticated:
             if not user.is_verified():
-                has_device = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
+                has_device = TOTPDevice.objects.filter(
+                    user=user, confirmed=True
+                ).exists()
                 if has_device:
-                    return redirect("portal:mfa_verify")   # ask for code
-                return redirect("portal:mfa_setup")        # show QR setup
-
+                    return redirect("portal:mfa_verify")  # ask for code
+                return redirect("portal:mfa_setup")  # show QR setup
 
         return self.get_response(request)

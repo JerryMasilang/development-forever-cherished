@@ -10,12 +10,11 @@ from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.utils.html import format_html
+
 # SYNC TEST: forms.py edited locally
 # SYNC TEST: forms.py edited locally
 # SYNC TEST: forms.py edited on GitHub
 # SYNC TEST: forms.py edited on GitHub
-
-
 
 
 User = get_user_model()
@@ -36,12 +35,14 @@ class PortalAuthenticationForm(AuthenticationForm):
         This is where Django blocks inactive users.
         """
         if not user.is_active:
-            admin_email = getattr(settings, "ADMIN_SUPPORT_EMAIL", "admin@yourdomain.com")
+            admin_email = getattr(
+                settings, "ADMIN_SUPPORT_EMAIL", "admin@yourdomain.com"
+            )
             raise forms.ValidationError(
                 format_html(
-                    'Account disabled. Contact administrator: '
+                    "Account disabled. Contact administrator: "
                     '<a href="mailto:{0}">{0}</a>',
-                    admin_email
+                    admin_email,
                 ),
                 code="inactive",
             )
@@ -52,6 +53,8 @@ class PortalAuthenticationForm(AuthenticationForm):
         We do NOT check is_active here anymore.
         """
         return super().clean()
+
+
 class UserCreateForm(forms.ModelForm):
     role = forms.ChoiceField(choices=ROLE_CHOICES)
     password1 = forms.CharField(widget=forms.PasswordInput, label="Password")
@@ -108,6 +111,7 @@ class UserEditForm(forms.ModelForm):
             user.profile.save(update_fields=["role"])
         return user
 
+
 class DistributorApplicationForm(forms.ModelForm):
     class Meta:
         model = DistributorApplication
@@ -118,18 +122,26 @@ class PortalPasswordResetForm(PasswordResetForm):
     """
     Fixes NoReverseMatch by generating reset URLs using the portal namespace.
     """
-    def save(self, domain_override=None,
-             subject_template_name='registration/password_reset_subject.txt',
-             email_template_name='registration/password_reset_email.html',
-             use_https=False, token_generator=None,
-             from_email=None, request=None,
-             html_email_template_name=None,
-             extra_email_context=None):
+
+    def save(
+        self,
+        domain_override=None,
+        subject_template_name="registration/password_reset_subject.txt",
+        email_template_name="registration/password_reset_email.html",
+        use_https=False,
+        token_generator=None,
+        from_email=None,
+        request=None,
+        html_email_template_name=None,
+        extra_email_context=None,
+    ):
 
         # Force the correct namespaced URL name for the reset-confirm link
         if extra_email_context is None:
             extra_email_context = {}
-        extra_email_context["password_reset_confirm_url_name"] = "portal:password_reset_confirm"
+        extra_email_context["password_reset_confirm_url_name"] = (
+            "portal:password_reset_confirm"
+        )
 
         return super().save(
             domain_override=domain_override,

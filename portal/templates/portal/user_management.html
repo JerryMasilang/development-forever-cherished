@@ -1,6 +1,4 @@
-{% extends "portal/base.html" %}
-{% block title %}User Management{% endblock %}
-
+{% extends "portal/base.html" %} {% block title %}User Management{% endblock %}
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -10,7 +8,11 @@
   </div>
 
   {% if is_admin or is_manager %}
-  <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCreateUser">
+  <button
+    class="btn btn-success"
+    data-bs-toggle="modal"
+    data-bs-target="#modalCreateUser"
+  >
     <i class="bi bi-person-plus me-1"></i> Create User
   </button>
   {% endif %}
@@ -25,7 +27,7 @@
           <th>Role</th>
           <th>Status</th>
           <th>MFA</th>
-          <th style="width:160px;">Actions</th>
+          <th style="width: 160px">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -39,18 +41,23 @@
 
           <td>
             {% if u.is_active %}
-              <span class="badge bg-success">Active</span>
+            <span class="badge bg-success">Active</span>
             {% else %}
-              <span class="badge bg-danger">Inactive</span>
+            <span class="badge bg-danger">Inactive</span>
             {% endif %}
           </td>
 
           <td>
             {% if u.otpdevice_set.exists %}
-              <span class="badge bg-success">Enabled</span>
+            <span class="badge bg-success">Enabled</span>
             {% else %}
-              <span class="badge bg-warning text-dark">Not Enrolled</span>
+            <span class="badge bg-warning text-dark">Not Enrolled</span>
             {% endif %}
           </td>
 
-          <td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

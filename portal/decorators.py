@@ -1,6 +1,7 @@
 from functools import wraps
 from django.http import HttpResponseForbidden
 
+
 def admin_required(view_func):
     @wraps(view_func)
     def _wrapped(request, *args, **kwargs):
@@ -10,4 +11,5 @@ def admin_required(view_func):
         if request.user.is_superuser or role == "Administrator":
             return view_func(request, *args, **kwargs)
         return HttpResponseForbidden("Admins only.")
+
     return _wrapped
