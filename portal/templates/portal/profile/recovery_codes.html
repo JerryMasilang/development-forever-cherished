@@ -1,0 +1,39 @@
+{% extends "portal/base.html" %}
+{% block title %}Recovery Codes{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h4 class="mb-0">Recovery Codes</h4>
+      <div class="text-muted small">Save these codes somewhere safe. Each code works only once.</div>
+    </div>
+  </div>
+
+  {% if codes %}
+    <div class="alert alert-warning">
+      <strong>Show once:</strong> These codes will not be shown again. Copy/download them now.
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <ul class="mb-0">
+          {% for c in codes %}
+            <li><code>{{ c }}</code></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  {% else %}
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <p class="mb-3">Generate a new set of recovery codes. This will invalidate any existing codes.</p>
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary">Generate Recovery Codes</button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

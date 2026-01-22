@@ -19,6 +19,7 @@ from django_otp import login as otp_login
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from .decorators import admin_required
+from portal.utils.security import audit
 from .forms import (
     DistributorApplicationForm,
     PortalAuthenticationForm,
@@ -355,6 +356,14 @@ def user_reset_mfa(request, user_id):
 
     return render(request, "portal/users/user_reset_mfa_confirm.html", {"user_obj": user_obj})
 
+    reason = (request.POST.get("reason") or "").strip()
+    if not reason:
+        messages.error(request, "Reason is required.")
+        return redirect("portal:user_reset_mfa", user_id=user_obj.id)
+
+    TOTPDevice.objects.filter(user=user_obj).delete()
+    audit(request, "RESET_MFA", target_user=user_obj, reason=reason)
+    messages.success(...)
 
 # -------------------------
 # Distributor application

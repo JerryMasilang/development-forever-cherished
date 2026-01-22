@@ -101,3 +101,54 @@ class MFARecoveryCode(models.Model):
     @property
     def is_used(self) -> bool:
         return self.used_at is not None
+    
+
+
+class MFARecoveryCode(models.Model):
+    """
+    Hashed recovery codes (never store plaintext).
+    Each code is single-use.
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="mfa_recovery_codes",
+    )
+    code_hash = models.CharField(max_length=128, db_index=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "used_at"])]
+
+    @property
+    def is_used(self) -> bool:
+        return self.used_at is not None
+
+
+class AuditLog(models.Model):
+    """
+    Lightweight audit log for admin actions and security-relevant events.
+    """
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs",
+    )
+    action = models.CharField(max_length=120)  # e.g. "RESET_MFA", "RESET_RECOVERY_CODES"
+    target_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs_as_target",
+    )
+    reason = models.TextField(blank=True)
+    ip_address = models.CharField(max_length=64, blank=True)
+    user_agent = models.TextField(blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self) -> str:
+        return f"{self.created_at:%Y-%m-%d %H:%M} {self.action}"

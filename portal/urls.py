@@ -1,9 +1,11 @@
 # portal/urls.py
 from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
-
+from portal.views_security import RateLimitedPasswordResetView
 from . import views
 from .forms import PortalPasswordResetForm
+from portal import views_security
+
 
 app_name = "portal"
 
@@ -42,7 +44,7 @@ urlpatterns = [
     # Password reset (email)
     path(
         "password-reset/",
-        auth_views.PasswordResetView.as_view(
+        RateLimitedPasswordResetView.as_view(
             template_name="portal/auth/password_reset.html",
             email_template_name="portal/auth/password_reset_email.html",
             subject_template_name="portal/auth/password_reset_subject.txt",
@@ -76,4 +78,8 @@ urlpatterns = [
 
     # Distributor apply
     path("apply/distributor/", views.distributor_apply, name="distributor_apply"),
+    path("profile/", views_security.profile_settings, name="profile"),
+    path("profile/recovery-codes/", views_security.recovery_codes_generate, name="recovery_codes_generate"),
+    path("mfa/recovery/", views_security.mfa_recovery, name="mfa_recovery"),
+
 ]

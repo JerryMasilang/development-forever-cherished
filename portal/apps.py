@@ -6,4 +6,4 @@ class PortalConfig(AppConfig):
     name = "portal"
 
     def ready(self):
-        from . import signals  # noqa
+        import portal.signals  # noqa
