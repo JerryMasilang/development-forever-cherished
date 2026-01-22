@@ -12,7 +12,9 @@ from django.contrib.auth.views import LoginView
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-
+from .utils.recovery_codes import generate_plain_codes, replace_user_codes, verify_and_consume_code
+from .models import MFARecoveryCode
+from .decorators import admin_required
 from django_otp import login as otp_login
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
@@ -368,3 +370,49 @@ def distributor_apply(request):
         form = DistributorApplicationForm()
 
     return render(request, "portal/auth/distributor_apply.html", {"form": form})
+
+
+
+@login_required
+def mfa_recovery_codes(request):
+    """
+    Show/generate recovery codes. Show plaintext ONLY on generation.
+    """
+    if request.method == "POST":
+        codes = generate_plain_codes(10)
+        replace_user_codes(request.user, codes)
+        return render(request, "portal/mfa_recovery_codes.html", {"codes": codes})
+
+    return render(request, "portal/mfa_recovery_codes.html", {"codes": None})
+
+
+@login_required
+def mfa_recovery(request):
+    """
+    Alternative MFA verification using a recovery code.
+    """
+    if request.method == "POST":
+        code = request.POST.get("code", "").strip()
+        if verify_and_consume_code(request.user, code):
+            # Mark OTP as satisfied by logging in a confirmed device if exists;
+            # If no confirmed device yet, still allow session to continue.
+            device = TOTPDevice.objects.filter(user=request.user, confirmed=True).order_by("-id").first()
+            if device:
+                otp_login(request, device)
+
+            messages.success(request, "Recovery code accepted.")
+            return redirect("portal:dashboard")
+
+        messages.error(request, "Invalid or already-used recovery code.")
+        return redirect("portal:mfa_recovery")
+
+    return render(request, "portal/mfa_recovery.html")
+
+@admin_required
+def user_reset_recovery(request, user_id):
+    user_obj = get_object_or_404(get_user_model(), id=user_id)
+    if request.method == "POST":
+        MFARecoveryCode.objects.filter(user=user_obj).delete()
+        messages.success(request, f"Recovery codes reset for {user_obj.username}.")
+        return redirect("portal:user_list")
+    return render(request, "portal/users/user_reset_recovery_confirm.html", {"user_obj": user_obj})

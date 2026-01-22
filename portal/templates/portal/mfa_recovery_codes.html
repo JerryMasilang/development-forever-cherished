@@ -1,0 +1,21 @@
+{% extends "portal/base.html" %}
+{% block title %}Recovery Codes{% endblock %}
+
+{% block content %}
+<h2>Recovery Codes</h2>
+
+{% if codes %}
+  <p><strong>Save these codes now.</strong> Each code can be used only once.</p>
+  <ul>
+    {% for c in codes %}
+      <li><code>{{ c }}</code></li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>Generate a new set of recovery codes. This will invalidate any existing ones.</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit">Generate Recovery Codes</button>
+  </form>
+{% endif %}
+{% endblock %}

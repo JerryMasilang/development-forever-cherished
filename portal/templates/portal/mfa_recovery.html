@@ -1,0 +1,13 @@
+{% extends "portal/base_auth.html" %}
+{% block title %}Use Recovery Code{% endblock %}
+
+{% block content %}
+<h2>Use a Recovery Code</h2>
+<form method="post">
+  {% csrf_token %}
+  <label>Recovery code</label>
+  <input type="text" name="code" autocomplete="one-time-code" required>
+  <button type="submit">Verify</button>
+</form>
+<p><a href="{% url 'portal:mfa_setup' %}">Back to authenticator</a></p>
+{% endblock %}

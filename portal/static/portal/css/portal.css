@@ -9,3 +9,30 @@
 
 .card { border-radius: 12px; }
 .card-header { border-top-left-radius: 12px; border-top-right-radius: 12px; }
+
+
+/* --- Auth header user area (email + logout) --- */
+.auth-userbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-userbar__identity {
+  font-size: 13px;
+  color: #555;
+}
+
+.auth-userbar__logout {
+  font-size: 13px;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  text-decoration: none;
+  color: #333;
+  background: #f8f9fa;
+}
+
+.auth-userbar__logout:hover {
+  background: #f1f3f5;
+}

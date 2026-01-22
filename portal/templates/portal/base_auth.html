@@ -20,17 +20,27 @@
   <body class="bg-light">
     <!-- Minimal Navbar for Auth pages -->
     <nav class="navbar navbar-light bg-white border-bottom">
-      <div class="container-fluid">
+      <div
+        class="container-fluid d-flex justify-content-between align-items-center"
+      >
         <span class="navbar-brand fw-semibold mb-0">
           Forever Cherished <span class="text-muted">| QR Portal</span>
         </span>
 
-        <div class="ms-auto">
+        {% if request.user.is_authenticated %}
+        <div class="d-flex align-items-center gap-2">
           <span class="text-muted small">
-            {% if request.user.is_authenticated %} {{
-            request.user.email|default:request.user.username }} {% endif %}
+            {{ request.user.email|default:request.user.username }}
           </span>
+
+          <form method="post" action="{% url 'portal:logout' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary btn-sm">
+              Logout
+            </button>
+          </form>
         </div>
+        {% endif %}
       </div>
     </nav>
 
