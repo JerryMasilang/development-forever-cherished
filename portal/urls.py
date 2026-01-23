@@ -21,14 +21,13 @@ urlpatterns = [
         name="logout",
     ),
 
-    # MFA
+    # MFA (PRIMARY + VERIFY)
     path("mfa/setup/", views.mfa_setup, name="mfa_setup"),
     path("mfa/verify/", views.mfa_verify, name="mfa_verify"),
     path("mfa/qr.png", views.mfa_qr_png, name="mfa_qr_png"),
 
-    # Recovery codes (we’ll implement in Step 1)
-    path("mfa/recovery/", views.mfa_recovery, name="mfa_recovery"),
-    path("mfa/recovery-codes/", views.mfa_recovery_codes, name="mfa_recovery_codes"),
+    # MFA Recovery (SECURITY MODULE ONLY)
+    path("mfa/recovery/", views_security.mfa_recovery, name="mfa_recovery"),
 
     # QR
     path("qr/", views.qr_control_center, name="qr_control_center"),
@@ -41,7 +40,10 @@ urlpatterns = [
     path("users/<int:user_id>/reset-mfa/", views.user_reset_mfa, name="user_reset_mfa"),
     path("users/<int:user_id>/reset-recovery/", views.user_reset_recovery, name="user_reset_recovery"),
 
-    # Password reset (email)
+    # Profile / Recovery Codes
+    path("profile/", views_security.profile_settings, name="profile"),
+    path("profile/recovery-codes/", views_security.recovery_codes_generate, name="recovery_codes_generate"),
+        # Password reset
     path(
         "password-reset/",
         RateLimitedPasswordResetView.as_view(
@@ -76,10 +78,6 @@ urlpatterns = [
         name="password_reset_complete",
     ),
 
-    # Distributor apply
+    # Distributor
     path("apply/distributor/", views.distributor_apply, name="distributor_apply"),
-    path("profile/", views_security.profile_settings, name="profile"),
-    path("profile/recovery-codes/", views_security.recovery_codes_generate, name="recovery_codes_generate"),
-    path("mfa/recovery/", views_security.mfa_recovery, name="mfa_recovery"),
-
 ]

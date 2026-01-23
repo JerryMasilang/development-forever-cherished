@@ -9,6 +9,19 @@ class UserProfile(models.Model):
     ROLE_MANAGER = "Manager"
     ROLE_DISTRIBUTOR = "Distributor"
     ROLE_AUDITOR = "Auditor"
+    MFA_TOTP = "totp"
+    MFA_EMAIL = "email"
+    MFA_CHOICES = [
+        (MFA_TOTP, "Authenticator (TOTP)"),
+        (MFA_EMAIL, "Email OTP"),
+    ]
+
+    primary_mfa_method = models.CharField(
+        max_length=10,
+        choices=MFA_CHOICES,
+        default=MFA_TOTP,
+    )
+    email_fallback_enabled = models.BooleanField(default=True)
 
     ROLE_CHOICES = [
         (ROLE_DEVELOPER, "Developer"),

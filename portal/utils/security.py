@@ -4,12 +4,12 @@ from __future__ import annotations
 import hashlib
 import secrets
 from typing import Iterable, List, Optional
-
 from django.core.cache import cache
 from django.utils import timezone
-
 from portal.models import MFARecoveryCode, AuditLog
-
+from django.core.cache import cache
+from django.core.mail import send_mail
+from django.conf import settings
 
 def sha256_hex(value: str) -> str:
     return hashlib.sha256(value.strip().encode("utf-8")).hexdigest()
@@ -73,3 +73,54 @@ def rate_limit_hit(key: str, limit: int, window_seconds: int) -> bool:
         return True
     cache.incr(key)
     return False
+
+
+def _otp_cache_key(user_id: int) -> str:
+    return f"mfa:email:otp:{user_id}"
+
+def _otp_attempts_key(user_id: int) -> str:
+    return f"mfa:email:attempts:{user_id}"
+
+def issue_email_otp(request, user, ttl_seconds: int = 300) -> None:
+    ip = get_client_ip(request) or "unknown"
+
+    # Rate limit sends (per user + per IP)
+    if rate_limit_hit(f"mfa_email_send:user:{user.id}", 5, 60 * 60):
+        raise ValueError("Too many OTP requests. Try again later.")
+    if rate_limit_hit(f"mfa_email_send:ip:{ip}", 20, 60 * 60):
+        raise ValueError("Too many OTP requests from this network. Try again later.")
+
+    if not user.email:
+        raise ValueError("No email address is set for your account.")
+
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    cache.set(_otp_cache_key(user.id), sha256_hex(code), ttl_seconds)
+    cache.set(_otp_attempts_key(user.id), 0, ttl_seconds)
+
+    subject = "Your Forever Cherished QR Portal verification code"
+    message = (
+        f"Your verification code is: {code}\n\n"
+        f"This code expires in {ttl_seconds//60} minutes."
+    )
+    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None)
+    send_mail(subject, message, from_email, [user.email], fail_silently=False)
+
+    audit(request, "MFA_EMAIL_OTP_SENT", target_user=user)
+
+def verify_email_otp(request, user, code: str, max_attempts: int = 6) -> bool:
+    stored = cache.get(_otp_cache_key(user.id))
+    if not stored:
+        return False
+
+    attempts = int(cache.get(_otp_attempts_key(user.id)) or 0)
+    if attempts >= max_attempts:
+        audit(request, "MFA_EMAIL_OTP_LOCKED", target_user=user)
+        return False
+
+    cache.incr(_otp_attempts_key(user.id))
+    ok = sha256_hex(code) == stored
+    if ok:
+        cache.delete(_otp_cache_key(user.id))
+        cache.delete(_otp_attempts_key(user.id))
+        audit(request, "MFA_EMAIL_OTP_VERIFIED", target_user=user)
+    return ok

@@ -35,11 +35,18 @@ class EnforceMFAMiddleware:
 
         if user.is_authenticated:
             if not user.is_verified():
-                has_device = TOTPDevice.objects.filter(
-                    user=user, confirmed=True
-                ).exists()
+                # ✅ Option A: respect user's primary MFA method
+                profile = getattr(user, "profile", None)
+                primary = getattr(profile, "primary_mfa_method", "totp")
+
+                # If primary is email, always go to the verify page (email UI)
+                if primary == "email":
+                    return redirect("portal:mfa_verify")
+
+                # Otherwise primary is totp: go verify if device exists, else setup
+                has_device = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
                 if has_device:
-                    return redirect("portal:mfa_verify")  # ask for code
-                return redirect("portal:mfa_setup")  # show QR setup
+                    return redirect("portal:mfa_verify")
+                return redirect("portal:mfa_setup")
 
         return self.get_response(request)

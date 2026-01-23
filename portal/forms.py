@@ -19,6 +19,29 @@ from django.utils.html import format_html
 
 User = get_user_model()
 
+
+
+def apply_bootstrap(form):
+    """
+    Apply Bootstrap 5 classes to all fields so they render correctly in templates.
+    """
+    for name, field in form.fields.items():
+        widget = field.widget
+
+        # checkbox
+        if widget.__class__.__name__ == "CheckboxInput":
+            existing = widget.attrs.get("class", "")
+            widget.attrs["class"] = (existing + " form-check-input").strip()
+        else:
+            existing = widget.attrs.get("class", "")
+            widget.attrs["class"] = (existing + " form-control").strip()
+
+        # make selects also look like bootstrap (still form-control works fine)
+        widget.attrs.setdefault("autocomplete", "off")
+
+
+
+
 ROLE_CHOICES = [
     ("Developer", "Developer"),
     ("Administrator", "Administrator"),
@@ -56,14 +79,35 @@ class PortalAuthenticationForm(AuthenticationForm):
 
 
 class UserCreateForm(forms.ModelForm):
-    role = forms.ChoiceField(choices=ROLE_CHOICES)
-    password1 = forms.CharField(widget=forms.PasswordInput, label="Password")
-    password2 = forms.CharField(widget=forms.PasswordInput, label="Confirm Password")
+    role = forms.ChoiceField(choices=ROLE_CHOICES, widget=forms.Select(attrs={"class": "form-select"}))
+    password1 = forms.CharField(widget=forms.PasswordInput(attrs={"class": "form-control"}), label="Password")
+    password2 = forms.CharField(widget=forms.PasswordInput(attrs={"class": "form-control"}), label="Confirm Password")
+
+    primary_mfa_method = forms.ChoiceField(
+        choices=[("totp", "Authenticator (TOTP)"), ("email", "Email OTP")],
+        initial="totp",
+        required=True,
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    email_fallback_enabled = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="Enable OTP fallback",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
 
     class Meta:
         model = User
         fields = ["username", "email", "is_active"]
+        widgets = {
+            "username": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+        }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # is_active is part of ModelForm widgets; set it here
+        self.fields["is_active"].widget.attrs.update({"class": "form-check-input"})
     def clean_password1(self):
         pwd = self.cleaned_data.get("password1")
         validate_password(pwd)
@@ -79,38 +123,62 @@ class UserCreateForm(forms.ModelForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
+
+        # ✅ set hashed password
         user.set_password(self.cleaned_data["password1"])
+
         if commit:
             user.save()
-            # profile should be created by your signal
+
+            # ✅ update profile values (signal should have created profile)
             if hasattr(user, "profile"):
                 user.profile.role = self.cleaned_data["role"]
-                user.profile.save(update_fields=["role"])
+                user.profile.primary_mfa_method = self.cleaned_data["primary_mfa_method"]
+                user.profile.email_fallback_enabled = self.cleaned_data["email_fallback_enabled"]
+                user.profile.save()
+
         return user
 
 
 class UserEditForm(forms.ModelForm):
-    class Meta:
-        model = User
-        fields = ["username", "email", "is_active"]  # add your other fields here
+    role = forms.ChoiceField(choices=ROLE_CHOICES, widget=forms.Select(attrs={"class": "form-select"}))
+    primary_mfa_method = forms.ChoiceField(
+        choices=[("totp", "Authenticator (TOTP)"), ("email", "Email OTP")],
+        required=True,
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    email_fallback_enabled = forms.BooleanField(
+        required=False,
+        label="Enable OTP fallback",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
 
     class Meta:
         model = User
         fields = ["email", "is_active"]
+        widgets = {
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+        }
 
     def __init__(self, *args, **kwargs):
         user = kwargs.get("instance")
         super().__init__(*args, **kwargs)
+
+        self.fields["is_active"].widget.attrs.update({"class": "form-check-input"})
+
         if user and hasattr(user, "profile"):
             self.fields["role"].initial = user.profile.role
+            self.fields["primary_mfa_method"].initial = getattr(user.profile, "primary_mfa_method", "totp")
+            self.fields["email_fallback_enabled"].initial = getattr(user.profile, "email_fallback_enabled", True)
 
     def save(self, commit=True):
         user = super().save(commit=commit)
         if hasattr(user, "profile"):
             user.profile.role = self.cleaned_data["role"]
-            user.profile.save(update_fields=["role"])
+            user.profile.primary_mfa_method = self.cleaned_data["primary_mfa_method"]
+            user.profile.email_fallback_enabled = self.cleaned_data["email_fallback_enabled"]
+            user.profile.save()
         return user
-
 
 class DistributorApplicationForm(forms.ModelForm):
     class Meta:
