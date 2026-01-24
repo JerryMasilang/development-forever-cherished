@@ -5,11 +5,13 @@ from .models import DistributorApplication
 from django.contrib.auth.forms import AuthenticationForm
 from django import forms
 from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.utils.html import format_html
+from .models import PasswordHistory, UserProfile
 
 # SYNC TEST: forms.py edited locally
 # SYNC TEST: forms.py edited locally
@@ -222,3 +224,60 @@ class PortalPasswordResetForm(PasswordResetForm):
             html_email_template_name=html_email_template_name,
             extra_email_context=extra_email_context,
         )
+
+class ProfileSettingsForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ["display_name", "contact_number", "organization", "avatar"]
+        widgets = {
+            "display_name": forms.TextInput(attrs={"class": "form-control"}),
+            "contact_number": forms.TextInput(attrs={"class": "form-control"}),
+            "organization": forms.TextInput(attrs={"class": "form-control"}),
+            "avatar": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        # 👇 this is where request.user is passed in
+        self.request_user = kwargs.pop("request_user", None)
+        super().__init__(*args, **kwargs)
+
+        if not self.request_user or not hasattr(self.request_user, "profile"):
+            return
+
+        role = self.request_user.profile.role
+
+        # 🔒 Roles that CANNOT edit names
+        LOCKED_ROLES = {"Manager", "Distributor", "Auditor"}
+
+        if role in LOCKED_ROLES:
+            # Lock display name
+            self.fields["display_name"].disabled = True
+
+class PortalPasswordChangeForm(PasswordChangeForm):
+    """
+    Prevent reuse of last 2 passwords + uses Django validators.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Bootstrap
+        for f in self.fields.values():
+            f.widget.attrs.setdefault("class", "form-control")
+
+    def clean_new_password1(self):
+        new_pwd = self.cleaned_data.get("new_password1")
+
+        if not new_pwd:
+            return new_pwd
+
+        user = self.user
+
+        # Compare against last 2 stored hashes
+        recent = PasswordHistory.objects.filter(user=user).order_by("-created_at")[:2]
+
+        from django.contrib.auth.hashers import check_password
+
+        for item in recent:
+            if check_password(new_pwd, item.password_hash):
+                raise ValidationError("You cannot reuse your last 2 passwords.")
+
+        return new_pwd

@@ -10,6 +10,8 @@ from portal.models import MFARecoveryCode, AuditLog
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.conf import settings
+import time
+
 
 def sha256_hex(value: str) -> str:
     return hashlib.sha256(value.strip().encode("utf-8")).hexdigest()
@@ -124,3 +126,54 @@ def verify_email_otp(request, user, code: str, max_attempts: int = 6) -> bool:
         cache.delete(_otp_attempts_key(user.id))
         audit(request, "MFA_EMAIL_OTP_VERIFIED", target_user=user)
     return ok
+
+
+
+def step_up_mark_verified(request, purpose: str):
+    ttl = getattr(settings, "STEP_UP_TTL_SECONDS", 300)
+    request.session[f"stepup:{purpose}"] = int(time.time()) + ttl
+
+def step_up_is_verified(request, purpose: str) -> bool:
+    exp = request.session.get(f"stepup:{purpose}")
+    if not exp:
+        return False
+    try:
+        return int(exp) >= int(time.time())
+    except Exception:
+        return False
+
+def step_up_clear(request, purpose: str):
+    request.session.pop(f"stepup:{purpose}", None)
+
+def email_otp_issue(request, purpose: str) -> str:
+    """
+    Generate OTP and store server-side in session.
+    """
+    ttl = getattr(settings, "EMAIL_OTP_TTL_SECONDS", 300)
+    code = f"{secrets.randbelow(1000000):06d}"
+    request.session[f"emailotp:{purpose}:code"] = code
+    request.session[f"emailotp:{purpose}:exp"] = int(time.time()) + ttl
+    request.session[f"emailotp:{purpose}:tries"] = 0
+    return code
+
+def email_otp_verify(request, purpose: str, code: str) -> bool:
+    stored = request.session.get(f"emailotp:{purpose}:code")
+    exp = request.session.get(f"emailotp:{purpose}:exp")
+    tries = int(request.session.get(f"emailotp:{purpose}:tries") or 0)
+
+    if tries >= 5:
+        return False
+
+    request.session[f"emailotp:{purpose}:tries"] = tries + 1
+
+    if not stored or not exp:
+        return False
+    if int(exp) < int(time.time()):
+        return False
+
+    return (stored == (code or "").strip())
+
+def email_otp_clear(request, purpose: str):
+    request.session.pop(f"emailotp:{purpose}:code", None)
+    request.session.pop(f"emailotp:{purpose}:exp", None)
+    request.session.pop(f"emailotp:{purpose}:tries", None)

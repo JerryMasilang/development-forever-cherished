@@ -1,39 +1,48 @@
 {% extends "portal/base.html" %}
 {% block title %}Recovery Codes{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-  <div class="d-flex align-items-center justify-content-between mb-3">
+<div class="container py-3">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
     <div>
       <h4 class="mb-0">Recovery Codes</h4>
       <div class="text-muted small">Save these codes somewhere safe. Each code works only once.</div>
     </div>
+    <a class="btn btn-outline-secondary" href="{% url 'portal:settings' %}">Back to Settings</a>
   </div>
+
+  <hr>
 
   {% if codes %}
     <div class="alert alert-warning">
       <strong>Show once:</strong> These codes will not be shown again. Copy/download them now.
     </div>
 
-    <div class="card shadow-sm">
+    <div class="card">
       <div class="card-body">
-        <ul class="mb-0">
+        <div class="row g-2">
           {% for c in codes %}
-            <li><code>{{ c }}</code></li>
+            <div class="col-6 col-md-4">
+              <code class="d-block p-2 border rounded text-center">{{ c }}</code>
+            </div>
           {% endfor %}
-        </ul>
+        </div>
       </div>
+    </div>
+
+    <!-- PDF download comes next slice -->
+    <div class="text-muted small mt-2">
+      PDF download will be added next (server-generated).
     </div>
   {% else %}
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <p class="mb-3">Generate a new set of recovery codes. This will invalidate any existing codes.</p>
-        <form method="post">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-primary">Generate Recovery Codes</button>
-        </form>
-      </div>
+    <div class="alert alert-info">
+      Generate a new set of recovery codes. This will invalidate any existing codes.
     </div>
+
+    <form method="post" class="d-flex gap-2">
+      {% csrf_token %}
+      <button class="btn btn-primary" type="submit">Generate Recovery Codes</button>
+      <a class="btn btn-outline-secondary" href="{% url 'portal:settings' %}">Cancel</a>
+    </form>
   {% endif %}
 </div>
 {% endblock %}

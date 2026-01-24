@@ -32,15 +32,19 @@ urlpatterns = [
     # QR
     path("qr/", views.qr_control_center, name="qr_control_center"),
     path("qr/png/<str:qr_id>/", views.qr_png, name="qr_png"),
-
     # User management
     path("users/", views.user_list, name="user_list"),
     path("users/create/", views.user_create, name="user_create"),
     path("users/<int:user_id>/edit/", views.user_edit, name="user_edit"),
     path("users/<int:user_id>/reset-mfa/", views.user_reset_mfa, name="user_reset_mfa"),
     path("users/<int:user_id>/reset-recovery/", views.user_reset_recovery, name="user_reset_recovery"),
-
     # Profile / Recovery Codes
+    path("settings/", views_security.profile_settings, name="settings"),
+    path("settings/recovery-codes/", views_security.recovery_codes_generate, name="recovery_codes_generate"),
+    path("settings/verify/", views_security.stepup_verify, name="stepup_verify"),
+
+
+    # Backward compatible (optional): keep old /profile/ route redirect to /settings/
     path("profile/", views_security.profile_settings, name="profile"),
     path("profile/recovery-codes/", views_security.recovery_codes_generate, name="recovery_codes_generate"),
         # Password reset
@@ -63,12 +67,12 @@ urlpatterns = [
         name="password_reset_done",
     ),
     path(
-        "reset/<uidb64>/<token>/",
-        auth_views.PasswordResetConfirmView.as_view(
-            template_name="portal/auth/password_reset_confirm.html",
-            success_url=reverse_lazy("portal:password_reset_complete"),
-        ),
-        name="password_reset_confirm",
+      "reset/<uidb64>/<token>/",
+      auth_views.PasswordResetConfirmView.as_view(
+          template_name="portal/auth/password_reset_confirm.html",
+          success_url=reverse_lazy("portal:password_reset_complete"),
+      ),
+      name="password_reset_confirm",
     ),
     path(
         "reset/done/",

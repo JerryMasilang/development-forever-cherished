@@ -1,28 +1,324 @@
 {% extends "portal/base.html" %}
-{% block title %}Profile{% endblock %}
+{% block title %}Profile Settings{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-  <h4 class="mb-3">Profile & Security</h4>
+<div class="container-fluid py-3">
+  <div class="row g-3">
+    <!-- Left: Settings nav -->
+    <div class="col-12 col-lg-3">
+      <div class="card">
+        <div class="card-body p-2">
+          <div class="nav nav-pills flex-row flex-lg-column gap-2 overflow-auto"
+               id="settings-tabs" role="tablist" style="white-space:nowrap;">
+            <button class="nav-link active"
+                    id="tab-profile-btn"
+                    data-bs-toggle="pill"
+                    data-bs-target="#tab-profile"
+                    type="button"
+                    role="tab"
+                    aria-controls="tab-profile"
+                    aria-selected="true">
+              Profile
+            </button>
 
-  <div class="card shadow-sm mb-3">
-    <div class="card-body">
-      <div class="mb-2"><strong>User:</strong> {{ request.user.username }}</div>
-      <div class="mb-0"><strong>Email:</strong> {{ request.user.email|default:"(none)" }}</div>
+            <button class="nav-link"
+                    id="tab-security-btn"
+                    data-bs-toggle="pill"
+                    data-bs-target="#tab-security"
+                    type="button"
+                    role="tab"
+                    aria-controls="tab-security"
+                    aria-selected="false">
+              Security
+            </button>
+
+            <button class="nav-link"
+                    id="tab-recovery-btn"
+                    data-bs-toggle="pill"
+                    data-bs-target="#tab-recovery"
+                    type="button"
+                    role="tab"
+                    aria-controls="tab-recovery"
+                    aria-selected="false">
+              Recovery Codes
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <h6 class="mb-2">Recovery Codes</h6>
-      <p class="text-muted small mb-3">
-        Recovery codes help you sign in if you lose access to your authenticator.
-      </p>
+    <!-- Right: Tab panels -->
+    <div class="col-12 col-lg-9">
+      <div class="tab-content">
 
-      <a href="{% url 'portal:recovery_codes_generate' %}" class="btn btn-primary">
-        Manage Recovery Codes
-      </a>
+        <!-- PROFILE TAB -->
+        <div class="tab-pane fade show active"
+             id="tab-profile"
+             role="tabpanel"
+             aria-labelledby="tab-profile-btn"
+             tabindex="0">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="mb-3">Basic Profile Information</h5>
+
+              <form method="post" enctype="multipart/form-data" class="row g-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="profile">
+
+                <!-- ✅ Avatar Block (paste-ready) -->
+                <div class="col-12">
+                  <label class="form-label">Avatar</label>
+
+                  <div class="d-flex flex-column flex-sm-row align-items-center align-items-sm-center gap-3 text-center text-sm-start">
+                    <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center flex-shrink-0 mx-auto mx-sm-0"
+                         style="width:88px;height:88px;overflow:hidden;">
+
+                      {% if profile.avatar %}
+                        <img src="{{ profile.avatar.url }}" alt="avatar"
+                             style="width:100%;height:100%;object-fit:cover;object-position:center;">
+                      {% else %}
+                        <span class="fw-bold text-muted" style="font-size:28px;">
+                          {{ profile.display_name|default:request.user.email|default:"U"|slice:":1"|upper }}
+                        </span>
+                      {% endif %}
+                    </div>
+
+                    <div class="w-100">
+                      {{ form.avatar }}
+                      <div class="form-text">Optional. Large photos will be resized automatically.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                  <label class="form-label">Display Name (Locked)</label>
+                  {{ form.display_name }}
+                </div>
+
+                <div class="col-12 col-md-6">
+                  <label class="form-label">Contact Number <span class="text-danger">*</span></label>
+                  {{ form.contact_number }}
+                </div>
+
+                <div class="col-12 col-md-6">
+                  <label class="form-label">First Name (locked)</label>
+                  <input class="form-control" value="{{ request.user.first_name }}" disabled>
+                </div>
+
+                <div class="col-12 col-md-6">
+                  <label class="form-label">Last Name (locked)</label>
+                  <input class="form-control" value="{{ request.user.last_name }}" disabled>
+                </div>
+
+                <div class="col-12 col-md-6">
+                  <label class="form-label">Assigned Organization/Business</label>
+                  {{ form.organization }}
+                </div>
+
+                <div class="col-12 d-flex justify-content-end">
+                  <button class="btn btn-primary" type="submit">Save Profile</button>
+                </div>
+              </form>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- SECURITY TAB -->
+        <div class="tab-pane fade"
+             id="tab-security"
+             role="tabpanel"
+             aria-labelledby="tab-security-btn"
+             tabindex="0">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="mb-3">Password & Authentication</h5>
+
+              <form method="post" class="row g-3">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="password">
+
+
+              <!-- Show passwords toggle -->
+              <div class="col-12">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="toggleAllPasswords">
+                  <label class="form-check-label" for="toggleAllPasswords">
+                    Show passwords
+                  </label>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">Old Password</label>
+                {{ pwd_form.old_password }}
+                {% if pwd_form.old_password.errors %}
+                  <div class="text-danger small mt-1">
+                    {{ pwd_form.old_password.errors|striptags }}
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">New Password</label>
+                {{ pwd_form.new_password1 }}
+                <div id="pwStrength" class="small mt-1"></div>
+                <div id="pwStrengthBarWrap" class="progress mt-1 d-none" style="height: 8px;">
+                  <div id="pwStrengthBar" class="progress-bar" role="progressbar" style="width:0%"></div>
+                </div>
+
+                {% if pwd_form.new_password1.errors %}
+                  <div class="text-danger small mt-1">
+                    {{ pwd_form.new_password1.errors|striptags }}
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">Repeat New Password</label>
+                {{ pwd_form.new_password2 }}
+                <div id="pwMatch" class="small mt-1"></div>
+
+                {% if pwd_form.new_password2.errors %}
+                  <div class="text-danger small mt-1">
+                    {{ pwd_form.new_password2.errors|striptags }}
+                  </div>
+                {% endif %}
+              </div>
+
+
+
+              <div class="col-12 d-flex justify-content-end">
+                <button class="btn btn-warning" type="submit">Change Password</button>
+              </div>
+            </form>
+
+
+              <div class="alert alert-info mt-3 mb-0">
+                Step-up verification (Authenticator OR Email) will be enforced next slice.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RECOVERY TAB -->
+        <div class="tab-pane fade"
+             id="tab-recovery"
+             role="tabpanel"
+             aria-labelledby="tab-recovery-btn"
+             tabindex="0">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="mb-2">Backup Recovery Codes</h5>
+              <p class="text-muted mb-3">Each code works once. Generate and store safely.</p>
+              <a class="btn btn-outline-primary" href="{% url 'portal:recovery_codes_generate' %}">
+                Manage Recovery Codes
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
   </div>
 </div>
 {% endblock %}
+
+
+
+{% block scripts %}
+<script>
+  // show all passwords toggle
+  document.addEventListener("DOMContentLoaded", function () {
+    const toggle = document.getElementById("toggleAllPasswords");
+    if (!toggle) return;
+
+    const fields = [
+      document.getElementById("id_old_password"),
+      document.getElementById("id_new_password1"),
+      document.getElementById("id_new_password2"),
+    ].filter(Boolean);
+
+    toggle.addEventListener("change", function () {
+      const type = toggle.checked ? "text" : "password";
+      fields.forEach(f => f.type = type);
+    });
+  });
+</script>
+
+<script>
+  // password strength + match indicator
+  document.addEventListener("DOMContentLoaded", function () {
+    const p1 = document.getElementById("id_new_password1");
+    const p2 = document.getElementById("id_new_password2");
+    const matchEl = document.getElementById("pwMatch");
+    const strengthEl = document.getElementById("pwStrength");
+    const barWrap = document.getElementById("pwStrengthBarWrap");
+    const bar = document.getElementById("pwStrengthBar");
+
+    function updateMatch() {
+      if (!p1 || !p2 || !matchEl) return;
+      const a = p1.value || "";
+      const b = p2.value || "";
+      if (!a && !b) { matchEl.textContent = ""; return; }
+      if (!b) { matchEl.textContent = ""; return; }
+
+      if (a === b) {
+        matchEl.textContent = "Passwords match.";
+        matchEl.className = "small mt-1 text-success";
+      } else {
+        matchEl.textContent = "Passwords do not match.";
+        matchEl.className = "small mt-1 text-danger";
+      }
+    }
+
+    function scorePassword(pw) {
+      let score = 0;
+      if (!pw) return 0;
+      if (pw.length >= 8) score += 1;
+      if (pw.length >= 12) score += 1;
+      if (/[a-z]/.test(pw)) score += 1;
+      if (/[A-Z]/.test(pw)) score += 1;
+      if (/[0-9]/.test(pw)) score += 1;
+      if (/[^A-Za-z0-9]/.test(pw)) score += 1;
+      return Math.min(score, 6);
+    }
+
+    function updateStrength() {
+      if (!p1 || !strengthEl || !barWrap || !bar) return;
+      const pw = p1.value || "";
+
+      if (!pw) {
+        strengthEl.textContent = "";
+        barWrap.classList.add("d-none");
+        bar.style.width = "0%";
+        bar.className = "progress-bar";
+        return;
+      }
+
+      const s = scorePassword(pw);
+      const pct = Math.round((s / 6) * 100);
+
+      barWrap.classList.remove("d-none");
+      bar.style.width = pct + "%";
+
+      let label = "Weak";
+      let cls = "bg-danger";
+      if (s >= 5) { label = "Strong"; cls = "bg-success"; }
+      else if (s >= 3) { label = "Medium"; cls = "bg-warning"; }
+
+      strengthEl.textContent = `Strength: ${label}`;
+      strengthEl.className = "small mt-1 " + (cls === "bg-success" ? "text-success" : cls === "bg-warning" ? "text-warning" : "text-danger");
+      bar.className = "progress-bar " + cls;
+    }
+
+    if (p1) p1.addEventListener("input", function () { updateStrength(); updateMatch(); });
+    if (p2) p2.addEventListener("input", updateMatch);
+
+    updateStrength();
+    updateMatch();
+  });
+</script>
+{% endblock %}
+
+

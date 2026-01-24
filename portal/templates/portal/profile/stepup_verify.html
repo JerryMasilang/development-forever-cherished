@@ -1,0 +1,90 @@
+{% extends "portal/base.html" %}
+{% block title %}Verify{% endblock %}
+
+{% block content %}
+<div class="container py-3" style="max-width: 720px;">
+  <div class="card">
+    <div class="card-body">
+      <h5 class="mb-1">Verification Required</h5>
+      <p class="text-muted mb-4">Choose a method to verify it’s really you.</p>
+
+      <div class="row g-3">
+
+        <!-- Authenticator -->
+        <div class="col-12 col-md-6">
+          <div class="border rounded p-3 h-100">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-shield-lock"></i>
+              <strong>Authenticator</strong>
+            </div>
+
+            {% if has_totp %}
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="method" value="totp">
+                <div class="mb-2">
+                  <label class="form-label">6-digit code</label>
+                  <input class="form-control" name="code" inputmode="numeric" autocomplete="one-time-code" required>
+                </div>
+                <button class="btn btn-primary w-100">Verify</button>
+              </form>
+            {% else %}
+              <div class="text-muted small">
+                No authenticator is configured for your account.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Email OTP -->
+        <div class="col-12 col-md-6">
+          <div class="border rounded p-3 h-100">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-envelope-check"></i>
+              <strong>Email OTP</strong>
+            </div>
+
+            {% if has_email %}
+              {% if method == "email_verify" %}
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="method" value="email_verify">
+                  <div class="mb-2">
+                    <label class="form-label">Code sent to {{ request.user.email }}</label>
+                    <input class="form-control" name="code" inputmode="numeric" autocomplete="one-time-code" required>
+                  </div>
+                  <button class="btn btn-primary w-100">Verify</button>
+                </form>
+
+                <form method="post" class="mt-2">
+                  {% csrf_token %}
+                  <input type="hidden" name="method" value="email_send">
+                  <button class="btn btn-outline-secondary w-100">Resend Code</button>
+                </form>
+              {% else %}
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="method" value="email_send">
+                  <button class="btn btn-outline-primary w-100">Send Code</button>
+                </form>
+                <div class="text-muted small mt-2">
+                  Sends a one-time code to your email.
+                </div>
+              {% endif %}
+            {% else %}
+              <div class="text-muted small">
+                No email is set for your account.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+
+      <div class="mt-4 d-flex justify-content-end">
+        <a class="btn btn-outline-secondary" href="{{ next_url }}">Cancel</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

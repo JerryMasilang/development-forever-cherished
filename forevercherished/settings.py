@@ -138,6 +138,13 @@ PUBLIC_SITE_BASE_URL = "https://forevercherished.online"
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "/static/"
+# Media (uploads)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+# Step-up verification window (seconds)
+STEP_UP_TTL_SECONDS = 300  # 5 minutes
+EMAIL_OTP_TTL_SECONDS = 300
+
 
 AUTHENTICATION_BACKENDS = [
     "portal.auth_backends.EmailOrUsernameBackend",
