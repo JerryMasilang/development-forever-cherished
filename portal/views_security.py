@@ -14,6 +14,9 @@ from portal.utils.security import audit
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.contrib.sessions.models import Session
+from django.utils import timezone
+
 
 
 
@@ -98,6 +101,40 @@ class RateLimitedPasswordResetView(PasswordResetView):
         return super().form_valid(form)
     
 
+
+def _get_user_sessions(user, current_session_key: str | None):
+    """
+    Return list of sessions for this user (active, non-expired).
+    """
+    now = timezone.now()
+    sessions = []
+
+    for s in Session.objects.filter(expire_date__gte=now):
+        data = s.get_decoded()
+        if str(data.get("_auth_user_id")) != str(user.pk):
+            continue
+
+        sessions.append({
+            "session_key": s.session_key,
+            "is_current": (s.session_key == current_session_key),
+            "expire_date": s.expire_date,
+            "last_seen": data.get("last_seen", ""),
+            "ip": data.get("ip", ""),
+            "ua": data.get("ua", ""),
+        })
+
+    # Sort: current first, then by last_seen desc-ish
+    def sort_key(x):
+        return (0 if x["is_current"] else 1, x["last_seen"] or "")
+    sessions.sort(key=sort_key)
+
+    return sessions
+
+
+def _terminate_session(session_key: str):
+    Session.objects.filter(session_key=session_key).delete()
+
+
 @login_required
 def profile_settings(request):
     profile = getattr(request.user, "profile", None)
@@ -123,42 +160,59 @@ def profile_settings(request):
             form = ProfileSettingsForm(instance=profile, request_user=request.user)
             pwd_form = PortalPasswordChangeForm(request.user, request.POST)
 
-            # 1) Old password must be correct first (inline error)
             old_pwd = (request.POST.get("old_password") or "").strip()
             if not request.user.check_password(old_pwd):
                 pwd_form.add_error("old_password", "Incorrect old password.")
+                sessions = _get_user_sessions(request.user, request.session.session_key)
                 return render(request, "portal/profile/settings.html", {
                     "profile": profile,
                     "form": form,
                     "pwd_form": pwd_form,
-                    "active_tab": "security",
+                    "sessions": sessions,  # ✅ ADD THIS
                 })
 
-            # 2) Validate new passwords before step-up
             if not pwd_form.is_valid():
+                sessions = _get_user_sessions(request.user, request.session.session_key)
                 return render(request, "portal/profile/settings.html", {
                     "profile": profile,
                     "form": form,
                     "pwd_form": pwd_form,
-                    "active_tab": "security",
+                    "sessions": sessions,  # ✅ ADD THIS
                 })
 
-            # 3) If form is valid, THEN require step-up
             from portal.utils.security import step_up_is_verified
             if not step_up_is_verified(request, "change_password"):
-                request.session["pending_password_change"] = True  # marker
+                request.session["pending_password_change"] = True
                 verify_url = (
                     f"{reverse_lazy('portal:stepup_verify')}"
                     f"?purpose=change_password&next={reverse_lazy('portal:settings')}%23tab-security"
                 )
                 return redirect(verify_url)
 
-            # 4) Step-up already satisfied -> save
             pwd_form.save()
             audit(request, "PASSWORD_CHANGED", target_user=request.user)
             messages.success(request, "Password changed successfully.")
             request.session.pop("pending_password_change", None)
             return redirect("portal:settings")
+
+        # ✅ ADD THIS BLOCK
+        elif action == "terminate_session":
+            session_key = request.POST.get("session_key") or ""
+            if session_key and session_key != request.session.session_key:
+                _terminate_session(session_key)
+                audit(request, "SESSION_TERMINATED", target_user=request.user)
+                messages.success(request, "Session terminated.")
+            return redirect(reverse_lazy("portal:settings") + "#tab-security")
+
+        # ✅ ADD THIS BLOCK
+        elif action == "terminate_other_sessions":
+            current = request.session.session_key
+            for s in _get_user_sessions(request.user, current):
+                if not s["is_current"]:
+                    _terminate_session(s["session_key"])
+            audit(request, "OTHER_SESSIONS_TERMINATED", target_user=request.user)
+            messages.success(request, "Other sessions terminated.")
+            return redirect(reverse_lazy("portal:settings") + "#tab-security")
 
         else:
             form = ProfileSettingsForm(
@@ -174,11 +228,86 @@ def profile_settings(request):
         )
         pwd_form = PortalPasswordChangeForm(request.user)
 
+    # ✅ ALSO ADD sessions HERE
+    sessions = _get_user_sessions(request.user, request.session.session_key)
     return render(request, "portal/profile/settings.html", {
         "profile": profile,
         "form": form,
         "pwd_form": pwd_form,
+        "sessions": sessions,
     })
+
+
+@login_required
+def request_email_change(request):
+    profile = request.user.profile
+
+    if request.method == "POST":
+        form = EmailChangeForm(request.POST)
+
+        if not form.is_valid():
+            return render(request, "portal/profile/email_change.html", {"form": form})
+
+        # Require step-up
+        if not step_up_is_verified(request, "change_email"):
+            verify_url = (
+                f"{reverse_lazy('portal:stepup_verify')}"
+                f"?purpose=change_email&next={reverse_lazy('portal:request_email_change')}"
+            )
+            request.session["pending_email_change"] = form.cleaned_data["new_email"]
+            return redirect(verify_url)
+
+        # Step-up passed → create token
+        new_email = form.cleaned_data["new_email"]
+        token = uuid.uuid4()
+
+        profile.pending_email = new_email
+        profile.email_change_token = token
+        profile.email_change_requested_at = timezone.now()
+        profile.save()
+
+        confirm_url = request.build_absolute_uri(
+            reverse_lazy("portal:confirm_email_change", args=[str(token)])
+        )
+
+        send_mail(
+            "Confirm your new email",
+            f"Click to confirm your new email:\n\n{confirm_url}",
+            settings.DEFAULT_FROM_EMAIL,
+            [new_email],
+            fail_silently=False,
+        )
+
+        audit(request, "EMAIL_CHANGE_REQUESTED", target_user=request.user)
+        messages.info(request, "Verification email sent to the new address.")
+        return redirect("portal:settings")
+
+    else:
+        form = EmailChangeForm()
+
+    return render(request, "portal/profile/email_change.html", {"form": form})
+
+
+
+@login_required
+def confirm_email_change(request, token):
+    profile = request.user.profile
+
+    if not profile.email_change_token or str(profile.email_change_token) != token:
+        messages.error(request, "Invalid or expired email change link.")
+        return redirect("portal:settings")
+
+    request.user.email = profile.pending_email
+    request.user.save()
+
+    profile.pending_email = None
+    profile.email_change_token = None
+    profile.email_change_requested_at = None
+    profile.save()
+
+    audit(request, "EMAIL_CHANGED", target_user=request.user)
+    messages.success(request, "Your email address has been updated.")
+    return redirect("portal:settings")
 
 
 

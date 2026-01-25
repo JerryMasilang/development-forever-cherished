@@ -42,6 +42,9 @@ urlpatterns = [
     path("settings/", views_security.profile_settings, name="settings"),
     path("settings/recovery-codes/", views_security.recovery_codes_generate, name="recovery_codes_generate"),
     path("settings/verify/", views_security.stepup_verify, name="stepup_verify"),
+    path("settings/email/change/", views_security.request_email_change, name="request_email_change"),
+    path("settings/email/confirm/<uuid:token>/", views_security.confirm_email_change, name="confirm_email_change"),
+
 
 
     # Backward compatible (optional): keep old /profile/ route redirect to /settings/

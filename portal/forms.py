@@ -253,6 +253,48 @@ class ProfileSettingsForm(forms.ModelForm):
             # Lock display name
             self.fields["display_name"].disabled = True
 
+
+class EmailChangeForm(forms.Form):
+    new_email = forms.EmailField(
+        label="New email address",
+        widget=forms.EmailInput(attrs={"class": "form-control"})
+    )
+    confirm_email = forms.EmailField(
+        label="Confirm new email",
+        widget=forms.EmailInput(attrs={"class": "form-control"})
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        e1 = cleaned.get("new_email")
+        e2 = cleaned.get("confirm_email")
+
+        if e1 and e2 and e1.lower() != e2.lower():
+            raise ValidationError("Email addresses do not match.")
+
+        return cleaned
+
+
+class EmailChangeForm(forms.Form):
+    new_email = forms.EmailField(
+        label="New email address",
+        widget=forms.EmailInput(attrs={"class": "form-control"})
+    )
+    confirm_email = forms.EmailField(
+        label="Confirm new email",
+        widget=forms.EmailInput(attrs={"class": "form-control"})
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        e1 = cleaned.get("new_email")
+        e2 = cleaned.get("confirm_email")
+
+        if e1 and e2 and e1.lower() != e2.lower():
+            raise ValidationError("Email addresses do not match.")
+
+        return cleaned
+
 class PortalPasswordChangeForm(PasswordChangeForm):
     """
     Prevent reuse of last 2 passwords + uses Django validators.

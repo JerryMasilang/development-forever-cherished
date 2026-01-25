@@ -197,6 +197,65 @@
               <div class="alert alert-info mt-3 mb-0">
                 Step-up verification (Authenticator OR Email) will be enforced next slice.
               </div>
+              <hr class="my-4">
+
+              <h5 class="mb-3">Session & Login Activity</h5>
+
+              <div class="d-flex justify-content-end mb-2">
+                <form method="post" class="m-0">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="terminate_other_sessions">
+                  <button class="btn btn-outline-danger btn-sm">
+                    Terminate other sessions
+                  </button>
+                </form>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                  <thead>
+                    <tr>
+                      <th>Device</th>
+                      <th>IP</th>
+                      <th>Last Seen</th>
+                      <th class="text-end">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for s in sessions %}
+                      <tr>
+                        <td>
+                          {% if s.is_current %}
+                            <span class="badge bg-success me-2">Current</span>
+                          {% endif %}
+                          <div class="small text-muted text-truncate" style="max-width:360px;">
+                            {{ s.ua|default:"(unknown device)" }}
+                          </div>
+                        </td>
+                        <td class="small">{{ s.ip|default:"-" }}</td>
+                        <td class="small">
+                          {{ s.last_seen|default:"-" }}
+                        </td>
+                        <td class="text-end">
+                          {% if not s.is_current %}
+                            <form method="post" class="d-inline">
+                              {% csrf_token %}
+                              <input type="hidden" name="action" value="terminate_session">
+                              <input type="hidden" name="session_key" value="{{ s.session_key }}">
+                              <button class="btn btn-outline-secondary btn-sm">Terminate</button>
+                            </form>
+                          {% else %}
+                            <span class="text-muted small">—</span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% empty %}
+                      <tr><td colspan="4" class="text-muted small">No active sessions found.</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
             </div>
           </div>
         </div>

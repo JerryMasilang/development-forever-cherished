@@ -1,0 +1,21 @@
+{% extends "portal/base.html" %}
+{% block title %}Change Email{% endblock %}
+
+{% block content %}
+<div class="container py-3" style="max-width:520px;">
+  <div class="card">
+    <div class="card-body">
+      <h5>Change Email Address</h5>
+      <p class="text-muted">Verification is required.</p>
+
+      <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="d-flex justify-content-end">
+          <button class="btn btn-primary">Continue</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
