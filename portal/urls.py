@@ -7,6 +7,7 @@ from .forms import PortalPasswordResetForm
 from portal import views_security
 
 
+
 app_name = "portal"
 
 urlpatterns = [
@@ -44,7 +45,6 @@ urlpatterns = [
     path("settings/verify/", views_security.stepup_verify, name="stepup_verify"),
     path("settings/email/change/", views_security.request_email_change, name="request_email_change"),
     path("settings/email/confirm/<uuid:token>/", views_security.confirm_email_change, name="confirm_email_change"),
-
 
 
     # Backward compatible (optional): keep old /profile/ route redirect to /settings/
@@ -87,4 +87,6 @@ urlpatterns = [
 
     # Distributor
     path("apply/distributor/", views.distributor_apply, name="distributor_apply"),
+    path("audit/", views_security.audit_log_view, name="audit_log"),
+
 ]

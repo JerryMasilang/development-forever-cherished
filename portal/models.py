@@ -185,29 +185,35 @@ class MFARecoveryCode(models.Model):
     @property
     def is_used(self) -> bool:
         return self.used_at is not None
+
+
 class AuditLog(models.Model):
-    """
-    Lightweight audit log for admin actions and security-relevant events.
-    """
+    created_at = models.DateTimeField(auto_now_add=True)
+
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        related_name="audit_actor",
         on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="audit_logs",
     )
-    action = models.CharField(max_length=120)  # e.g. "RESET_MFA", "RESET_RECOVERY_CODES"
+
     target_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        related_name="audit_target",
         on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="audit_logs_as_target",
     )
-    reason = models.TextField(blank=True)
-    ip_address = models.CharField(max_length=64, blank=True)
-    user_agent = models.TextField(blank=True)
-    created_at = models.DateTimeField(default=timezone.now)
 
-    def __str__(self) -> str:
-        return f"{self.created_at:%Y-%m-%d %H:%M} {self.action}"
+    action = models.CharField(max_length=64, db_index=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    ua = models.CharField(max_length=255, blank=True, default="")
+    reason = models.CharField(max_length=255, blank=True, default="")
+
+    # Optional: extra details (future-proof). Safe even if you don't use it yet.
+    meta = models.JSONField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.created_at} {self.action} actor={self.actor_id} target={self.target_user_id}"

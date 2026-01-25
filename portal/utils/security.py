@@ -11,6 +11,8 @@ from django.core.cache import cache
 from django.core.mail import send_mail
 from django.conf import settings
 import time
+from portal.models import AuditLog
+from django.utils.timezone import now
 
 
 def sha256_hex(value: str) -> str:
@@ -177,3 +179,28 @@ def email_otp_clear(request, purpose: str):
     request.session.pop(f"emailotp:{purpose}:code", None)
     request.session.pop(f"emailotp:{purpose}:exp", None)
     request.session.pop(f"emailotp:{purpose}:tries", None)
+
+
+def audit(request, action: str, target_user=None, reason: str = "", meta=None):
+    try:
+        ip = get_client_ip(request) if request else None
+        ua = ""
+        if request:
+            ua = (request.META.get("HTTP_USER_AGENT") or "")[:255]
+
+        actor = getattr(request, "user", None)
+        if actor and not getattr(actor, "is_authenticated", False):
+            actor = None
+
+        AuditLog.objects.create(
+            actor=actor,
+            target_user=target_user,
+            action=action,
+            ip=ip,
+            ua=ua,
+            reason=reason or "",
+            meta=meta,
+        )
+    except Exception:
+        # never block the request due to logging failures
+        pass
