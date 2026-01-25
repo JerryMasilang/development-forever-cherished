@@ -13,6 +13,7 @@ from django.conf import settings
 import time
 from portal.models import AuditLog
 from django.utils.timezone import now
+from datetime import timedelta
 
 
 def sha256_hex(value: str) -> str:
@@ -204,3 +205,41 @@ def audit(request, action: str, target_user=None, reason: str = "", meta=None):
     except Exception:
         # never block the request due to logging failures
         pass
+    
+
+NOTIFICATION_ACTIONS = {
+    "PASSWORD_CHANGED",
+    "MFA_RECOVERY_CODE_USED",
+    "SESSION_TERMINATED",
+    "OTHER_SESSIONS_TERMINATED",
+    "STEPUP_TOTP_FAILED",
+    "STEPUP_EMAIL_FAILED",
+    "QR_ASSIGNED",
+    "QR_RECEIVED",
+    "DISTRIBUTOR_APPROVED",
+    "DISTRIBUTOR_REJECTED",
+}
+
+def get_notifications_for_user(user, since_minutes=1440):
+    """
+    Return recent audit logs that qualify as notifications for this user.
+    Default: last 24 hours.
+    """
+    since = timezone.now() - timedelta(minutes=since_minutes)
+
+    qs = AuditLog.objects.filter(
+        created_at__gte=since,
+        action__in=NOTIFICATION_ACTIONS,
+    )
+
+    # Role-aware targeting
+    role = getattr(getattr(user, "profile", None), "role", None)
+
+    if role in {"Administrator", "Manager"}:
+        # admins see all important events
+        return qs.select_related("actor", "target_user")[:20]
+
+    # Regular users only see events affecting them
+    return qs.filter(
+        target_user=user
+    ).select_related("actor", "target_user")[:20]

@@ -208,12 +208,7 @@ class AuditLog(models.Model):
     ip = models.GenericIPAddressField(null=True, blank=True)
     ua = models.CharField(max_length=255, blank=True, default="")
     reason = models.CharField(max_length=255, blank=True, default="")
-
-    # Optional: extra details (future-proof). Safe even if you don't use it yet.
     meta = models.JSONField(blank=True, null=True)
 
     class Meta:
         ordering = ["-created_at"]
-
-    def __str__(self):
-        return f"{self.created_at} {self.action} actor={self.actor_id} target={self.target_user_id}"

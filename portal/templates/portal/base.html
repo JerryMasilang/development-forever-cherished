@@ -1,3 +1,4 @@
+{% load notifications %}
 {% load static %}
 <!doctype html>
 <html lang="en">
@@ -52,15 +53,50 @@
 
         <div class="ms-auto d-flex align-items-center gap-2">
           <!-- Notifications (Portal-only) -->
-          <a
-            class="btn btn-outline-secondary position-relative"
-            href="#"
-            aria-label="Notifications"
+          <div class="dropdown">
+          <button
+            class="btn btn-outline-secondary position-relative dropdown-toggle"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
           >
             <i class="bi bi-bell"></i>
-            {# Optional badge later #}
-              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">3</span>
-          </a>
+
+          {% get_notifications_for_user request.user as notifications %}
+          {% if notifications|length %}
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+              {{ notifications|length }}
+            </span>
+          {% endif %}
+
+          </button>
+
+          <ul class="dropdown-menu dropdown-menu-end p-0" style="min-width: 340px;">
+            <li class="dropdown-header small text-muted">Notifications</li>
+
+              {% if notifications %}
+                {% for n in notifications %}
+                  <li class="px-3 py-2 border-bottom small">
+                    <div class="fw-semibold">{{ n.action }}</div>
+                    <div class="text-muted">
+                      {{ n.created_at|date:"M d, H:i" }}
+                      {% if n.actor %} • by {{ n.actor.email }}{% endif %}
+                    </div>
+                  </li>
+                {% endfor %}
+              {% else %}
+                <li class="px-3 py-3 text-muted small">No new notifications</li>
+              {% endif %}
+
+
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a class="dropdown-item text-center small" href="{% url 'portal:audit_log' %}">
+                View all activity
+              </a>
+            </li>
+          </ul>
+        </div>
+
 
           <!-- User dropdown -->
           <div class="dropdown">

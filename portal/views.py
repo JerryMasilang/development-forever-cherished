@@ -27,6 +27,7 @@ from .forms import (
     UserEditForm,
 )
 from .models import DistributorApplication  # keep if used elsewhere
+from portal.utils.security import get_notifications_for_user
 
 
 # -------------------------
@@ -544,3 +545,14 @@ def user_reset_recovery(request, user_id):
         messages.success(request, f"Recovery codes reset for {user_obj.username}.")
         return redirect("portal:user_list")
     return render(request, "portal/users/user_reset_recovery_confirm.html", {"user_obj": user_obj})
+
+
+def navbar_notifications(request):
+    if not request.user.is_authenticated:
+        return {"notifications": [], "notification_count": 0}
+
+    items = get_notifications_for_user(request.user)
+    return {
+        "notifications": items,
+        "notification_count": len(items),
+    }
