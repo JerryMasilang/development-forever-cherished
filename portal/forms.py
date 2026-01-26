@@ -254,6 +254,59 @@ class ProfileSettingsForm(forms.ModelForm):
             self.fields["display_name"].disabled = True
 
 
+# class EmailChangeForm(forms.Form):
+#     new_email = forms.EmailField(
+#         label="New email address",
+#         widget=forms.EmailInput(attrs={"class": "form-control"})
+#     )
+#     confirm_email = forms.EmailField(
+#         label="Confirm new email",
+#         widget=forms.EmailInput(attrs={"class": "form-control"})
+#     )
+
+#     def clean(self):
+#         cleaned = super().clean()
+#         e1 = cleaned.get("new_email")
+#         e2 = cleaned.get("confirm_email")
+
+#         if e1 and e2 and e1.lower() != e2.lower():
+#             raise ValidationError("Email addresses do not match.")
+
+#         return cleaned
+
+
+
+class EmailChangeForm(forms.Form):
+    new_email = forms.EmailField(
+        label="New Email",
+        widget=forms.EmailInput(attrs={"class": "form-control", "autocomplete": "email"})
+    )
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean_new_email(self):
+        new_email = (self.cleaned_data.get("new_email") or "").strip().lower()
+        current = ((self.user.email if self.user else "") or "").strip().lower()
+
+        if not new_email:
+            raise forms.ValidationError("Please enter an email address.")
+
+        # SAME EMAIL CASE (your bug)
+        if new_email == current:
+            raise forms.ValidationError("New email must be different from your current email.")
+
+        # OPTIONAL: block emails already used by other accounts
+        qs = User.objects.filter(email__iexact=new_email)
+        if self.user:
+            qs = qs.exclude(pk=self.user.pk)
+        if qs.exists():
+            raise forms.ValidationError("That email is already in use.")
+
+        return new_email
+
+
 class EmailChangeForm(forms.Form):
     new_email = forms.EmailField(
         label="New email address",
@@ -275,39 +328,36 @@ class EmailChangeForm(forms.Form):
         return cleaned
 
 
-class EmailChangeForm(forms.Form):
-    new_email = forms.EmailField(
-        label="New email address",
-        widget=forms.EmailInput(attrs={"class": "form-control"})
-    )
-    confirm_email = forms.EmailField(
-        label="Confirm new email",
-        widget=forms.EmailInput(attrs={"class": "form-control"})
-    )
 
-    def clean(self):
-        cleaned = super().clean()
-        e1 = cleaned.get("new_email")
-        e2 = cleaned.get("confirm_email")
 
-        if e1 and e2 and e1.lower() != e2.lower():
-            raise ValidationError("Email addresses do not match.")
+from .models import PasswordHistory
 
-        return cleaned
 
 class PortalPasswordChangeForm(PasswordChangeForm):
     """
     Prevent reuse of last 2 passwords + uses Django validators.
+    Also removes autofocus to avoid stealing focus after redirects.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Bootstrap
-        for f in self.fields.values():
-            f.widget.attrs.setdefault("class", "form-control")
+
+        # Bootstrap styling + ensure no autofocus steals focus
+        for name, field in self.fields.items():
+            field.widget.attrs.setdefault("class", "form-control")
+
+            # ✅ Remove autofocus if present (from any source)
+            field.widget.attrs.pop("autofocus", None)
+
+            # ✅ Helpful browser hints (optional but nice)
+            # Old password should not auto-focus and should not interfere with email change UX
+            if name == "old_password":
+                field.widget.attrs.setdefault("autocomplete", "current-password")
+            elif name in ("new_password1", "new_password2"):
+                field.widget.attrs.setdefault("autocomplete", "new-password")
 
     def clean_new_password1(self):
         new_pwd = self.cleaned_data.get("new_password1")
-
         if not new_pwd:
             return new_pwd
 

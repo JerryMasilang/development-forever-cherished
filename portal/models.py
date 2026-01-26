@@ -32,6 +32,11 @@ class UserProfile(models.Model):
         related_name="profile",
     )
 
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
+    email_change_token_jti = models.CharField(max_length=64, blank=True, null=True)
+    email_change_token_used_at = models.DateTimeField(blank=True, null=True)
+
+
     # --- Identity / Baseline profile ---
     display_name = models.CharField(max_length=120, blank=True, default="")
     contact_number = models.CharField(max_length=30, blank=True, default="")

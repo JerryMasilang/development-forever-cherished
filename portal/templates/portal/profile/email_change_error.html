@@ -1,0 +1,21 @@
+{% extends "portal/base.html" %}
+{% block title %}Email Change{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-body p-4">
+          <h4 class="mb-2">{{ title }}</h4>
+          <p class="text-muted mb-4">{{ message }}</p>
+
+          <a class="btn btn-primary" href="{% url 'portal:settings' %}?tab=security">
+            Back to Settings
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

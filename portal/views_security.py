@@ -148,12 +148,43 @@ def _terminate_session(session_key: str):
 
 
 
+
+def _get_user_sessions(user, current_session_key: str | None):
+    now = timezone.now()
+    sessions = []
+    for s in Session.objects.filter(expire_date__gte=now):
+        data = s.get_decoded()
+        if str(data.get("_auth_user_id")) != str(user.pk):
+            continue
+        sessions.append({
+            "session_key": s.session_key,
+            "is_current": (s.session_key == current_session_key),
+            "expire_date": s.expire_date,
+            "last_seen": data.get("last_seen", ""),
+            "ip": data.get("ip", ""),
+            "ua": data.get("ua", ""),
+        })
+
+    def sort_key(x):
+        return (0 if x["is_current"] else 1, x["last_seen"] or "")
+    sessions.sort(key=sort_key)
+    return sessions
+
+
+def _terminate_session(session_key: str):
+    Session.objects.filter(session_key=session_key).delete()
+
+
+
 @login_required
 def profile_settings(request):
     profile = getattr(request.user, "profile", None)
 
+    # ✅ ALWAYS compute active_tab (default to profile)
+    active_tab = (request.GET.get("tab") or "profile").strip().lower()
+
     if request.method == "POST":
-        action = request.POST.get("action") or ""
+        action = (request.POST.get("action") or "").strip()
 
         # =========================
         # Profile update
@@ -165,12 +196,16 @@ def profile_settings(request):
                 instance=profile,
                 request_user=request.user
             )
+            pwd_form = PortalPasswordChangeForm(request.user)
+
             if form.is_valid():
                 form.save()
                 audit(request, "PROFILE_UPDATED", target_user=request.user)
                 messages.success(request, "Profile updated.")
-                return redirect("portal:settings")
-            pwd_form = PortalPasswordChangeForm(request.user)
+                return redirect(str(reverse_lazy("portal:settings")) + "?tab=profile")
+
+            # stay on profile tab on errors
+            active_tab = "profile"
 
         # =========================
         # Change password (step-up gated)
@@ -201,35 +236,32 @@ def profile_settings(request):
                     "active_tab": "security",
                 })
 
-            from portal.utils.security import step_up_is_verified
+            # ✅ correct purpose for password is change_password
             if not step_up_is_verified(request, "change_password"):
                 request.session["pending_password_change"] = True
-
-                # keep your tab routing
                 next_target = str(reverse_lazy("portal:settings")) + "?tab=security"
                 verify_url = (
                     f"{reverse_lazy('portal:stepup_verify')}"
-                    f"?purpose=change_email&next={quote(next_target, safe='')}"
+                    f"?purpose=change_password&next={quote(next_target, safe='')}"
                 )
                 return redirect(verify_url)
-
 
             pwd_form.save()
             audit(request, "PASSWORD_CHANGED", target_user=request.user)
             messages.success(request, "Password changed successfully.")
             request.session.pop("pending_password_change", None)
-            return redirect("portal:settings")
+            return redirect(str(reverse_lazy("portal:settings")) + "?tab=security")
 
         # =========================
         # Session management
         # =========================
         elif action == "terminate_session":
-            session_key = request.POST.get("session_key") or ""
+            session_key = (request.POST.get("session_key") or "").strip()
             if session_key and session_key != request.session.session_key:
                 _terminate_session(session_key)
                 audit(request, "SESSION_TERMINATED", target_user=request.user)
                 messages.success(request, "Session terminated.")
-            return redirect(reverse_lazy("portal:settings") + "?tab=security")
+            return redirect(str(reverse_lazy("portal:settings")) + "?tab=security")
 
         elif action == "terminate_other_sessions":
             current = request.session.session_key
@@ -238,7 +270,7 @@ def profile_settings(request):
                     _terminate_session(s["session_key"])
             audit(request, "OTHER_SESSIONS_TERMINATED", target_user=request.user)
             messages.success(request, "Other sessions terminated.")
-            return redirect(reverse_lazy("portal:settings") + "?tab=security")
+            return redirect(str(reverse_lazy("portal:settings")) + "?tab=security")
 
         # =========================
         # Email change (step-up -> verify new email)
@@ -286,23 +318,25 @@ def profile_settings(request):
                     "sessions": _get_user_sessions(request.user, request.session.session_key),
                 })
 
-            from portal.utils.security import step_up_is_verified
+            # Always overwrite pending email
+            request.session["pending_new_email"] = new_email
 
-            # Require step-up BEFORE continuing to verify new email
+            # ✅ FORCE step-up EVERY time for email change:
+            # Clear any cached step-up markers for change_email in session
+            for k in list(request.session.keys()):
+                lk = k.lower()
+                if "stepup" in lk and "change_email" in lk:
+                    request.session.pop(k, None)
+
+            # Require step-up
             if not step_up_is_verified(request, "change_email"):
-                request.session["pending_new_email"] = new_email
-
-                # ✅ IMPORTANT: after step-up, go to email_change_verify
                 next_target = str(reverse_lazy("portal:email_change_verify"))
-
                 verify_url = (
                     f"{reverse_lazy('portal:stepup_verify')}"
                     f"?purpose=change_email&next={quote(next_target, safe='')}"
                 )
                 return redirect(verify_url)
 
-            # Step-up already satisfied -> proceed to verify new email step
-            request.session["pending_new_email"] = new_email
             return redirect("portal:email_change_verify")
 
         # =========================
@@ -317,12 +351,17 @@ def profile_settings(request):
         pwd_form = PortalPasswordChangeForm(request.user)
 
     sessions = _get_user_sessions(request.user, request.session.session_key)
+    email_msg = (request.GET.get("email_msg") or "").strip()
+
     return render(request, "portal/profile/settings.html", {
         "profile": profile,
         "form": form,
         "pwd_form": pwd_form,
         "sessions": sessions,
+        "email_msg": email_msg,
+        "active_tab": active_tab,  # ✅ ALWAYS pass it
     })
+
 
 
 @login_required
@@ -523,20 +562,34 @@ def stepup_verify(request):
 
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 
+
+
 @login_required
 def email_change_verify(request):
-    new_email = request.session.get("pending_new_email")
+    new_email = (request.session.get("pending_new_email") or "").strip().lower()
     if not new_email:
         messages.error(request, "No pending email change request.")
         return redirect("portal:settings")
 
-    # Send verification link to new email (signed)
+    profile = getattr(request.user, "profile", None)
+    if profile is None:
+        messages.error(request, "Profile not found.")
+        return redirect("portal:settings")
+
+    # ✅ Unique token id (single-use)
+    jti = uuid.uuid4().hex
+    profile.email_change_token_jti = jti
+    profile.email_change_token_used_at = None
+    profile.save(update_fields=["email_change_token_jti", "email_change_token_used_at"])
+
     signer = TimestampSigner()
-    token = signer.sign(new_email)
+
+    # token payload: "<jti>|<email>"
+    token = signer.sign(f"{jti}|{new_email}")
 
     confirm_url = request.build_absolute_uri(
         reverse_lazy("portal:email_change_confirm")
-    ) + f"?token={token}"
+    ) + f"?token={quote(token)}"
 
     subject = "Confirm your new email - Forever Cherished QR Portal"
     body = (
@@ -544,51 +597,83 @@ def email_change_verify(request):
         f"This link expires in 30 minutes."
     )
 
-    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [new_email], fail_silently=True)
+    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [new_email], fail_silently=False)
     audit(request, "EMAIL_CHANGE_REQUESTED", target_user=request.user)
 
-    messages.info(request, f"We sent a confirmation link to {new_email}.")
-    return redirect(str(reverse_lazy("portal:settings")) + "?tab=security")
+    msg = quote(f"We sent a confirmation link to {new_email}.")
+    return redirect(str(reverse_lazy("portal:settings")) + f"?tab=security&scroll=top&email_msg={msg}")
 
 
 @login_required
 def email_change_confirm(request):
     token = (request.GET.get("token") or "").strip()
     if not token:
-        messages.error(request, "Invalid confirmation link.")
-        return redirect("portal:settings")
+        return render(request, "portal/profile/email_change_error.html", {
+            "title": "Invalid link",
+            "message": "This confirmation link is invalid. Please request a new email change.",
+        }, status=400)
 
     signer = TimestampSigner()
+
     try:
-        # 30 minutes expiry
-        new_email = signer.unsign(token, max_age=60 * 30)
+        payload = signer.unsign(token, max_age= 60 * 30)  # 30 minutes
+        jti, new_email = payload.split("|", 1)
+        new_email = new_email.strip().lower()
     except SignatureExpired:
         audit(request, "EMAIL_VERIFY_FAILED", target_user=request.user)
-        messages.error(request, "This confirmation link has expired.")
-        return redirect("portal:settings")
-    except BadSignature:
+        return render(request, "portal/profile/email_change_error.html", {
+            "title": "Link expired",
+            "message": "This confirmation link has expired. Please request a new email change.",
+        }, status=400)
+    except (BadSignature, ValueError):
         audit(request, "EMAIL_VERIFY_FAILED", target_user=request.user)
-        messages.error(request, "Invalid confirmation link.")
-        return redirect("portal:settings")
+        return render(request, "portal/profile/email_change_error.html", {
+            "title": "Invalid link",
+            "message": "This confirmation link is invalid. Please request a new email change.",
+        }, status=400)
 
-    # Apply email
-    request.user.email = new_email
-    request.user.save(update_fields=["email"])
+    profile = getattr(request.user, "profile", None)
+    if profile is None:
+        return render(request, "portal/profile/email_change_error.html", {
+            "title": "Profile missing",
+            "message": "We could not validate this request. Please request a new email change.",
+        }, status=400)
+
+    # ✅ Single-use enforcement
+    if not profile.email_change_token_jti or profile.email_change_token_jti != jti:
+        return render(request, "portal/profile/email_change_error.html", {
+            "title": "Link already used",
+            "message": "This confirmation link has already been used. Please request a new email change.",
+        }, status=400)
+
+    if profile.email_change_token_used_at is not None:
+        return render(request, "portal/profile/email_change_error.html", {
+            "title": "Link already used",
+            "message": "This confirmation link has already been used. Please request a new email change.",
+        }, status=400)
+
+    # ✅ Duplicate check BEFORE saving
     User = get_user_model()
     if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
-        messages.error(request, "That email is already in use. Please try another.")
-        # also clear any pending token/session so user retries cleanly
-        request.session.pop("pending_new_email", None)
-        return redirect(reverse_lazy("portal:settings") + "?tab=security")
+        return render(request, "portal/profile/email_change_error.html", {
+            "title": "Email already in use",
+            "message": "That email is already in use by another account. Please request a new email change.",
+        }, status=400)
 
+    # ✅ Apply
+    request.user.email = new_email
+    request.user.save(update_fields=["email"])
+
+    # ✅ Mark token used + clear session pending email
+    profile.email_change_token_used_at = timezone.now()
+    profile.email_change_token_jti = ""
+    profile.save(update_fields=["email_change_token_used_at", "email_change_token_jti"])
+
+    request.session.pop("pending_new_email", None)
 
     audit(request, "EMAIL_CHANGED", target_user=request.user)
     messages.success(request, "Email updated successfully.")
-    request.session.pop("pending_new_email", None)
-
     return redirect("portal:settings")
-
-
 
 
 @login_required

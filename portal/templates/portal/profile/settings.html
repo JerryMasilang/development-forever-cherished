@@ -2,6 +2,7 @@
 {% block title %}Profile Settings{% endblock %}
 
 {% block content %}
+<div id="page-top" tabindex="-1"></div>
 <div class="container-fluid py-3">
   <div class="row g-3">
     <!-- Left: Settings nav -->
@@ -9,40 +10,42 @@
       <div class="card">
         <div class="card-body p-2">
           <div class="nav nav-pills flex-row flex-lg-column gap-2 overflow-auto"
-               id="settings-tabs" role="tablist" style="white-space:nowrap;">
-            <button class="nav-link active"
+              id="settings-tabs" role="tablist" style="white-space:nowrap;">
+
+            <button class="nav-link {% if active_tab|default:'profile' == 'profile' %}active{% endif %}"
                     id="tab-profile-btn"
                     data-bs-toggle="pill"
                     data-bs-target="#tab-profile"
                     type="button"
                     role="tab"
                     aria-controls="tab-profile"
-                    aria-selected="true">
+                    aria-selected="{% if active_tab|default:'profile' == 'profile' %}true{% else %}false{% endif %}">
               Profile
             </button>
 
-            <button class="nav-link"
+            <button class="nav-link {% if active_tab == 'security' %}active{% endif %}"
                     id="tab-security-btn"
                     data-bs-toggle="pill"
                     data-bs-target="#tab-security"
                     type="button"
                     role="tab"
                     aria-controls="tab-security"
-                    aria-selected="false">
+                    aria-selected="{% if active_tab == 'security' %}true{% else %}false{% endif %}">
               Security
             </button>
 
-            <button class="nav-link"
+            <button class="nav-link {% if active_tab == 'recovery' %}active{% endif %}"
                     id="tab-recovery-btn"
                     data-bs-toggle="pill"
                     data-bs-target="#tab-recovery"
                     type="button"
                     role="tab"
                     aria-controls="tab-recovery"
-                    aria-selected="false">
+                    aria-selected="{% if active_tab == 'recovery' %}true{% else %}false{% endif %}">
               Recovery Codes
             </button>
           </div>
+
         </div>
       </div>
     </div>
@@ -52,7 +55,7 @@
       <div class="tab-content">
 
         <!-- PROFILE TAB -->
-        <div class="tab-pane fade show active"
+        <div class="tab-pane fade {% if active_tab|default:'profile' == 'profile' %}show active{% endif %}"
              id="tab-profile"
              role="tabpanel"
              aria-labelledby="tab-profile-btn"
@@ -125,11 +128,11 @@
         </div>
 
         <!-- SECURITY TAB -->
-        <div class="tab-pane fade"
-             id="tab-security"
-             role="tabpanel"
-             aria-labelledby="tab-security-btn"
-             tabindex="0">
+        <div class="tab-pane fade {% if active_tab == 'security' %}show active{% endif %}"
+            id="tab-security"
+            role="tabpanel"
+            aria-labelledby="tab-security-btn"
+            tabindex="0">
           <div class="card">
             <div class="card-body">
               <h5 class="mb-3">Password & Authentication</h5>
@@ -137,6 +140,15 @@
               <hr class="my-4">
 
               <h5 class="mb-3">Change Email</h5>
+              <div class="alert alert-info">
+                You will be asked to verify it’s really you (Authenticator or Email OTP), then confirm the new email.
+              </div>
+
+              {% if email_msg %}
+                <div class="alert alert-success">
+                  {{ email_msg }}
+                </div>
+              {% endif %}
 
               <form method="post" class="row g-3">
                 {% csrf_token %}
@@ -151,6 +163,7 @@
                 <div class="col-12">
                   <label class="form-label">New Email</label>
                   <input
+                    id="new_email_input"
                     type="email"
                     name="new_email"
                     class="form-control"
@@ -169,19 +182,11 @@
                     Request Email Change
                   </button>
                 </div>
-
-                <div class="col-12">
-                  <div class="alert alert-info mb-0">
-                    You will be asked to verify it’s really you (Authenticator or Email OTP), then confirm the new email.
-                  </div>
-                </div>
               </form>
-
 
               <form method="post" class="row g-3">
               {% csrf_token %}
               <input type="hidden" name="action" value="password">
-
 
               <!-- Show passwords toggle -->
               <div class="col-12">
@@ -230,13 +235,10 @@
                 {% endif %}
               </div>
 
-
-
               <div class="col-12 d-flex justify-content-end">
                 <button class="btn btn-warning" type="submit">Change Password</button>
               </div>
             </form>
-
 
               <div class="alert alert-info mt-3 mb-0">
                 Step-up verification (Authenticator OR Email) will be enforced next slice.
@@ -305,7 +307,7 @@
         </div>
 
         <!-- RECOVERY TAB -->
-        <div class="tab-pane fade"
+        <div class="tab-pane fade {% if active_tab == 'recovery' %}show active{% endif %}"
              id="tab-recovery"
              role="tabpanel"
              aria-labelledby="tab-recovery-btn"
@@ -329,7 +331,32 @@
 
 
 
+
 {% block scripts %}
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    if (!tab) return;
+
+    const map = {
+      "profile": "tab-profile-btn",
+      "security": "tab-security-btn",
+      "recovery": "tab-recovery-btn"
+    };
+
+    const btnId = map[tab];
+    if (!btnId) return;
+
+    const btn = document.getElementById(btnId);
+    if (btn) btn.click();
+  });
+</script>
+
+
+
+
 <script>
   // show all passwords toggle
   document.addEventListener("DOMContentLoaded", function () {
@@ -425,23 +452,67 @@
 
 
 <script>
-  (function() {
+  document.addEventListener("DOMContentLoaded", function () {
+    // If email change failed, focus the New Email field (not Old Password)
+    const hasEmailError = {{ email_error|yesno:"true,false" }};
+    if (!hasEmailError) return;
+
+    const el = document.getElementById("new_email_input");
+    if (el) {
+      el.focus();
+      el.select(); // optional: highlights the wrong email so user can replace fast
+      el.scrollIntoView({ block: "center" });
+    }
+  });
+</script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
     const params = new URLSearchParams(window.location.search);
-    const tab = params.get("tab");
-    if (!tab) return;
 
-    const map = {
-      "profile": "tab-profile-btn",
-      "security": "tab-security-btn",
-      "recovery": "tab-recovery-btn"
-    };
+    // If we explicitly request scroll-to-top OR there are Django alerts at the top,
+    // force scroll to top and remove focus from inputs (prevents browser from jumping down)
+    const wantTop = params.get("scroll") === "top";
+    const hasAlerts = document.querySelector(".alert") !== null;
 
-    const btnId = map[tab];
-    if (!btnId) return;
+    if (wantTop || hasAlerts) {
+      // blur any focused input (e.g., old password)
+      if (document.activeElement && typeof document.activeElement.blur === "function") {
+        document.activeElement.blur();
+      }
 
-    const btn = document.getElementById(btnId);
-    if (btn) btn.click();
-  })();
+      // scroll to top and focus an invisible top anchor so browser stays there
+      const topEl = document.getElementById("page-top");
+      if (topEl) topEl.focus({ preventScroll: true });
+
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
+  });
+</script>
+
+
+<script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get("tab");
+
+  const map = {
+    "profile": "tab-profile-btn",
+    "security": "tab-security-btn",
+    "recovery": "tab-recovery-btn"
+  };
+
+  Object.values(map).forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.classList.remove("active");
+  });
+
+  const btnId = map[tab];
+  if (!btnId) return;
+
+  const btn = document.getElementById(btnId);
+  if (btn) btn.click();
+})();
 </script>
 
 
