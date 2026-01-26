@@ -134,6 +134,50 @@
             <div class="card-body">
               <h5 class="mb-3">Password & Authentication</h5>
 
+              <hr class="my-4">
+
+              <h5 class="mb-3">Change Email</h5>
+
+              <form method="post" class="row g-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="email_change">
+
+                <div class="col-12">
+                  <label class="form-label">Current Email</label>
+                  <input class="form-control" value="{{ request.user.email }}" disabled>
+                  <div class="form-text">This is the email currently linked to your account.</div>
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label">New Email</label>
+                  <input
+                    type="email"
+                    name="new_email"
+                    class="form-control"
+                    placeholder="name@example.com"
+                    required
+                    autocomplete="email"
+                    value="{{ new_email|default:'' }}"
+                  >
+                  {% if email_error %}
+                    <div class="text-danger small mt-1">{{ email_error }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="col-12 d-flex justify-content-end">
+                  <button class="btn btn-outline-primary" type="submit">
+                    Request Email Change
+                  </button>
+                </div>
+
+                <div class="col-12">
+                  <div class="alert alert-info mb-0">
+                    You will be asked to verify it’s really you (Authenticator or Email OTP), then confirm the new email.
+                  </div>
+                </div>
+              </form>
+
+
               <form method="post" class="row g-3">
               {% csrf_token %}
               <input type="hidden" name="action" value="password">
@@ -378,6 +422,30 @@
     updateMatch();
   });
 </script>
+
+
+<script>
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    if (!tab) return;
+
+    const map = {
+      "profile": "tab-profile-btn",
+      "security": "tab-security-btn",
+      "recovery": "tab-recovery-btn"
+    };
+
+    const btnId = map[tab];
+    if (!btnId) return;
+
+    const btn = document.getElementById(btnId);
+    if (btn) btn.click();
+  })();
+</script>
+
+
+
 {% endblock %}
 
 

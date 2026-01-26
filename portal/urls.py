@@ -88,5 +88,9 @@ urlpatterns = [
     # Distributor
     path("apply/distributor/", views.distributor_apply, name="distributor_apply"),
     path("audit/", views_security.audit_log_view, name="audit_log"),
+    path("email/change/verify/", views_security.email_change_verify, name="email_change_verify"),
+    path("email/change/confirm/", views_security.email_change_confirm, name="email_change_confirm"),
+
+
 
 ]

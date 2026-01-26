@@ -20,6 +20,16 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from portal.models import AuditLog
 from portal.decorators import roles_required
+from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+from urllib.parse import quote
+from portal.utils.security import step_up_is_verified
+from portal.forms import EmailChangeForm
+import uuid
+from django.contrib.auth import get_user_model
+from portal.utils.security import step_up_is_verified
+from urllib.parse import unquote
+
+
 
 
 from portal.utils.security import (
@@ -137,6 +147,7 @@ def _terminate_session(session_key: str):
     Session.objects.filter(session_key=session_key).delete()
 
 
+
 @login_required
 def profile_settings(request):
     profile = getattr(request.user, "profile", None)
@@ -144,6 +155,9 @@ def profile_settings(request):
     if request.method == "POST":
         action = request.POST.get("action") or ""
 
+        # =========================
+        # Profile update
+        # =========================
         if action == "profile":
             form = ProfileSettingsForm(
                 request.POST,
@@ -158,6 +172,9 @@ def profile_settings(request):
                 return redirect("portal:settings")
             pwd_form = PortalPasswordChangeForm(request.user)
 
+        # =========================
+        # Change password (step-up gated)
+        # =========================
         elif action == "password":
             form = ProfileSettingsForm(instance=profile, request_user=request.user)
             pwd_form = PortalPasswordChangeForm(request.user, request.POST)
@@ -170,7 +187,8 @@ def profile_settings(request):
                     "profile": profile,
                     "form": form,
                     "pwd_form": pwd_form,
-                    "sessions": sessions,  # ✅ ADD THIS
+                    "sessions": sessions,
+                    "active_tab": "security",
                 })
 
             if not pwd_form.is_valid():
@@ -179,17 +197,22 @@ def profile_settings(request):
                     "profile": profile,
                     "form": form,
                     "pwd_form": pwd_form,
-                    "sessions": sessions,  # ✅ ADD THIS
+                    "sessions": sessions,
+                    "active_tab": "security",
                 })
 
             from portal.utils.security import step_up_is_verified
             if not step_up_is_verified(request, "change_password"):
                 request.session["pending_password_change"] = True
+
+                # keep your tab routing
+                next_target = str(reverse_lazy("portal:settings")) + "?tab=security"
                 verify_url = (
                     f"{reverse_lazy('portal:stepup_verify')}"
-                    f"?purpose=change_password&next={reverse_lazy('portal:settings')}%23tab-security"
+                    f"?purpose=change_email&next={quote(next_target, safe='')}"
                 )
                 return redirect(verify_url)
+
 
             pwd_form.save()
             audit(request, "PASSWORD_CHANGED", target_user=request.user)
@@ -197,16 +220,17 @@ def profile_settings(request):
             request.session.pop("pending_password_change", None)
             return redirect("portal:settings")
 
-        # ✅ ADD THIS BLOCK
+        # =========================
+        # Session management
+        # =========================
         elif action == "terminate_session":
             session_key = request.POST.get("session_key") or ""
             if session_key and session_key != request.session.session_key:
                 _terminate_session(session_key)
                 audit(request, "SESSION_TERMINATED", target_user=request.user)
                 messages.success(request, "Session terminated.")
-            return redirect(reverse_lazy("portal:settings") + "#tab-security")
+            return redirect(reverse_lazy("portal:settings") + "?tab=security")
 
-        # ✅ ADD THIS BLOCK
         elif action == "terminate_other_sessions":
             current = request.session.session_key
             for s in _get_user_sessions(request.user, current):
@@ -214,23 +238,84 @@ def profile_settings(request):
                     _terminate_session(s["session_key"])
             audit(request, "OTHER_SESSIONS_TERMINATED", target_user=request.user)
             messages.success(request, "Other sessions terminated.")
-            return redirect(reverse_lazy("portal:settings") + "#tab-security")
+            return redirect(reverse_lazy("portal:settings") + "?tab=security")
 
+        # =========================
+        # Email change (step-up -> verify new email)
+        # =========================
+        elif action == "email_change":
+            form = ProfileSettingsForm(instance=profile, request_user=request.user)
+            pwd_form = PortalPasswordChangeForm(request.user)
+
+            new_email = (request.POST.get("new_email") or "").strip().lower()
+            User = get_user_model()
+
+            # Basic validation
+            if not new_email or "@" not in new_email:
+                return render(request, "portal/profile/settings.html", {
+                    "profile": profile,
+                    "form": form,
+                    "pwd_form": pwd_form,
+                    "active_tab": "security",
+                    "new_email": new_email,
+                    "email_error": "Enter a valid email address.",
+                    "sessions": _get_user_sessions(request.user, request.session.session_key),
+                })
+
+            # Don't allow same email
+            if request.user.email and new_email == request.user.email.lower():
+                return render(request, "portal/profile/settings.html", {
+                    "profile": profile,
+                    "form": form,
+                    "pwd_form": pwd_form,
+                    "active_tab": "security",
+                    "new_email": new_email,
+                    "email_error": "That is already your current email.",
+                    "sessions": _get_user_sessions(request.user, request.session.session_key),
+                })
+
+            # Prevent duplicate email across users
+            if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
+                return render(request, "portal/profile/settings.html", {
+                    "profile": profile,
+                    "form": form,
+                    "pwd_form": pwd_form,
+                    "active_tab": "security",
+                    "new_email": new_email,
+                    "email_error": "That email is already in use by another account.",
+                    "sessions": _get_user_sessions(request.user, request.session.session_key),
+                })
+
+            from portal.utils.security import step_up_is_verified
+
+            # Require step-up BEFORE continuing to verify new email
+            if not step_up_is_verified(request, "change_email"):
+                request.session["pending_new_email"] = new_email
+
+                # ✅ IMPORTANT: after step-up, go to email_change_verify
+                next_target = str(reverse_lazy("portal:email_change_verify"))
+
+                verify_url = (
+                    f"{reverse_lazy('portal:stepup_verify')}"
+                    f"?purpose=change_email&next={quote(next_target, safe='')}"
+                )
+                return redirect(verify_url)
+
+            # Step-up already satisfied -> proceed to verify new email step
+            request.session["pending_new_email"] = new_email
+            return redirect("portal:email_change_verify")
+
+        # =========================
+        # Default fallthrough
+        # =========================
         else:
-            form = ProfileSettingsForm(
-                instance=profile,
-                request_user=request.user
-            )
+            form = ProfileSettingsForm(instance=profile, request_user=request.user)
             pwd_form = PortalPasswordChangeForm(request.user)
 
     else:
-        form = ProfileSettingsForm(
-            instance=profile,
-            request_user=request.user
-        )
+        form = ProfileSettingsForm(instance=profile, request_user=request.user)
         pwd_form = PortalPasswordChangeForm(request.user)
 
-    # ✅ ALSO ADD sessions HERE
     sessions = _get_user_sessions(request.user, request.session.session_key)
     return render(request, "portal/profile/settings.html", {
         "profile": profile,
@@ -249,15 +334,21 @@ def request_email_change(request):
 
         if not form.is_valid():
             return render(request, "portal/profile/email_change.html", {"form": form})
+        User = get_user_model()
+        if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
+            form.add_error("new_email", "That email is already in use by another account.")
+            return render(request, "portal/profile/email_change.html", {"form": form})
+
 
         # Require step-up
         if not step_up_is_verified(request, "change_email"):
+            next_target = str(reverse_lazy("portal:settings")) + "?tab=security"
             verify_url = (
                 f"{reverse_lazy('portal:stepup_verify')}"
-                f"?purpose=change_email&next={reverse_lazy('portal:request_email_change')}"
+                f"?purpose=change_email&next={quote(next_target, safe='')}"
             )
-            request.session["pending_email_change"] = form.cleaned_data["new_email"]
             return redirect(verify_url)
+
 
         # Step-up passed → create token
         new_email = form.cleaned_data["new_email"]
@@ -299,8 +390,31 @@ def confirm_email_change(request, token):
         messages.error(request, "Invalid or expired email change link.")
         return redirect("portal:settings")
 
+
+    User = get_user_model()
+
+# Final safety check: prevent duplicate email
+    if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
+        messages.error(request, "That email is already in use by another account.")
+        request.session.pop("pending_new_email", None)
+        return redirect(reverse_lazy("portal:settings") + "?tab=security")
     request.user.email = profile.pending_email
     request.user.save()
+    User = get_user_model()
+    if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
+        messages.error(request, "That email is already in use. Please try another.")
+        # also clear any pending token/session so user retries cleanly
+        request.session.pop("pending_new_email", None)
+        return redirect(reverse_lazy("portal:settings") + "?tab=security")
+
+
+
+    User = get_user_model()
+    if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
+        messages.error(request, "That email is already in use. Please try another.")
+        # also clear any pending token/session so user retries cleanly
+        request.session.pop("pending_new_email", None)
+        return redirect(reverse_lazy("portal:settings") + "?tab=security")
 
     profile.pending_email = None
     profile.email_change_token = None
@@ -317,18 +431,21 @@ def confirm_email_change(request, token):
 def stepup_verify(request):
     """
     Step-up verification page (Authenticator OR Email OTP).
-    Reusable for sensitive actions (change_password, change_email, download_pdf, etc.)
+    Reusable for sensitive actions (change_password, change_email, etc.)
     """
     purpose = (request.GET.get("purpose") or "general").strip()
-    next_url = request.GET.get("next") or reverse_lazy("portal:settings")
 
-    # Safety: prevent open redirect
-    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
-        next_url = reverse_lazy("portal:settings")
+    raw_next = request.GET.get("next") or str(reverse_lazy("portal:settings"))
+    # ✅ decode %23 back into # (and any other encodings)
+    next_url = unquote(raw_next)
+
+    # ✅ validate using URL WITHOUT fragment
+    next_url_for_check = next_url.split("#", 1)[0]
+    if not url_has_allowed_host_and_scheme(next_url_for_check, allowed_hosts={request.get_host()}):
+        next_url = str(reverse_lazy("portal:settings"))
 
     method = (request.POST.get("method") or request.GET.get("method") or "").strip()
 
-    # If already verified, just go back
     from portal.utils.security import step_up_is_verified, step_up_mark_verified
     if step_up_is_verified(request, purpose):
         return redirect(next_url)
@@ -344,26 +461,25 @@ def stepup_verify(request):
         )
         if not device:
             messages.error(request, "No authenticator is configured for your account.")
-            return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={next_url}")
+            return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}")
 
         if device.verify_token(code):
             step_up_mark_verified(request, purpose)
             audit(request, "STEPUP_TOTP_VERIFIED", target_user=request.user)
-
             messages.success(request, "Verified successfully.")
             return redirect(next_url)
 
         audit(request, "STEPUP_TOTP_FAILED", target_user=request.user)
         messages.error(request, "Invalid authenticator code.")
-        return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={next_url}")
+        return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}")
 
-    # --- Email OTP send ---
+    # --- Email OTP send/verify ---
     from portal.utils.security import email_otp_issue, email_otp_verify, email_otp_clear
 
     if request.method == "POST" and method == "email_send":
         if not request.user.email:
             messages.error(request, "No email is set for your account.")
-            return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={next_url}")
+            return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}")
 
         code = email_otp_issue(request, purpose)
 
@@ -377,9 +493,8 @@ def stepup_verify(request):
 
         audit(request, "STEPUP_EMAIL_OTP_SENT", target_user=request.user)
         messages.info(request, "We sent a verification code to your email.")
-        return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={next_url}&method=email_verify")
+        return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}&method=email_verify")
 
-    # --- Email OTP verify ---
     if request.method == "POST" and method == "email_verify":
         code = (request.POST.get("code") or "").strip()
         if email_otp_verify(request, purpose, code):
@@ -391,19 +506,90 @@ def stepup_verify(request):
 
         audit(request, "STEPUP_EMAIL_FAILED", target_user=request.user)
         messages.error(request, "Invalid or expired email code.")
-        return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={next_url}&method=email_verify")
+        return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}&method=email_verify")
 
     return render(
         request,
         "portal/profile/stepup_verify.html",
         {
             "purpose": purpose,
-            "next_url": next_url,
+            "next_url": next_url,   # decoded (safe for Cancel button)
             "method": method,
             "has_totp": TOTPDevice.objects.filter(user=request.user, confirmed=True).exists(),
             "has_email": bool(request.user.email),
         },
     )
+
+
+from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+
+@login_required
+def email_change_verify(request):
+    new_email = request.session.get("pending_new_email")
+    if not new_email:
+        messages.error(request, "No pending email change request.")
+        return redirect("portal:settings")
+
+    # Send verification link to new email (signed)
+    signer = TimestampSigner()
+    token = signer.sign(new_email)
+
+    confirm_url = request.build_absolute_uri(
+        reverse_lazy("portal:email_change_confirm")
+    ) + f"?token={token}"
+
+    subject = "Confirm your new email - Forever Cherished QR Portal"
+    body = (
+        f"Confirm your new email by clicking this link:\n\n{confirm_url}\n\n"
+        f"This link expires in 30 minutes."
+    )
+
+    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [new_email], fail_silently=True)
+    audit(request, "EMAIL_CHANGE_REQUESTED", target_user=request.user)
+
+    messages.info(request, f"We sent a confirmation link to {new_email}.")
+    return redirect(str(reverse_lazy("portal:settings")) + "?tab=security")
+
+
+@login_required
+def email_change_confirm(request):
+    token = (request.GET.get("token") or "").strip()
+    if not token:
+        messages.error(request, "Invalid confirmation link.")
+        return redirect("portal:settings")
+
+    signer = TimestampSigner()
+    try:
+        # 30 minutes expiry
+        new_email = signer.unsign(token, max_age=60 * 30)
+    except SignatureExpired:
+        audit(request, "EMAIL_VERIFY_FAILED", target_user=request.user)
+        messages.error(request, "This confirmation link has expired.")
+        return redirect("portal:settings")
+    except BadSignature:
+        audit(request, "EMAIL_VERIFY_FAILED", target_user=request.user)
+        messages.error(request, "Invalid confirmation link.")
+        return redirect("portal:settings")
+
+    # Apply email
+    request.user.email = new_email
+    request.user.save(update_fields=["email"])
+    User = get_user_model()
+    if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
+        messages.error(request, "That email is already in use. Please try another.")
+        # also clear any pending token/session so user retries cleanly
+        request.session.pop("pending_new_email", None)
+        return redirect(reverse_lazy("portal:settings") + "?tab=security")
+
+
+    audit(request, "EMAIL_CHANGED", target_user=request.user)
+    messages.success(request, "Email updated successfully.")
+    request.session.pop("pending_new_email", None)
+
+    return redirect("portal:settings")
+
+
+
 
 @login_required
 @roles_required("Administrator", "Manager")
