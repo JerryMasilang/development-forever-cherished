@@ -14,7 +14,3 @@ def dashboard(request):
     }
     alerts = []
     return render(request, "portal/dashboard.html", {"kpi": kpi, "alerts": alerts})
-
-
-
-

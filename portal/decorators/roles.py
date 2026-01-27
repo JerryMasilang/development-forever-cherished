@@ -11,6 +11,7 @@ def admin_required(view_func):
     Allows superusers and users with profile.role == 'Administrator'.
     Blocks everyone else.
     """
+
     @wraps(view_func)
     def _wrapped(request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -30,6 +31,7 @@ def roles_required(*allowed_roles):
     Allows only users whose profile.role is in allowed_roles.
     Redirects unauthorized users to dashboard with an error message.
     """
+
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped(request, *args, **kwargs):

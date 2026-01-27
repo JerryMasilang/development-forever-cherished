@@ -10,6 +10,7 @@ class PortalAuthenticationForm(AuthenticationForm):
     Your login form (works with your custom auth backends).
     Keep it simple unless you have extra validation rules.
     """
+
     username = forms.CharField(
         label="Email or Username",
         widget=forms.TextInput(attrs={"class": "form-control", "autofocus": True}),

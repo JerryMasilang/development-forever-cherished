@@ -17,7 +17,9 @@ def profile(request):
         if action == "change_email":
             email_form = EmailChangeForm(request.POST, user=request.user)
             if email_form.is_valid():
-                messages.success(request, "Verification link sent to your new email address.")
+                messages.success(
+                    request, "Verification link sent to your new email address."
+                )
                 return redirect(f"{reverse('portal:profile')}?tab=security")
 
             active_tab = "security"

@@ -15,7 +15,9 @@ def distributor_apply(request):
         form = DistributorApplicationForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, "Application submitted. We will contact you once reviewed.")
+            messages.success(
+                request, "Application submitted. We will contact you once reviewed."
+            )
             return redirect("portal:login")
     else:
         form = DistributorApplicationForm()

@@ -29,7 +29,9 @@ def user_create(request):
     else:
         form = UserCreateForm()
 
-    return render(request, "portal/users/user_form.html", {"form": form, "mode": "create"})
+    return render(
+        request, "portal/users/user_form.html", {"form": form, "mode": "create"}
+    )
 
 
 @admin_required
@@ -71,7 +73,9 @@ def user_reset_mfa(request, user_id):
         )
         return redirect("portal:user_list")
 
-    return render(request, "portal/users/user_reset_mfa_confirm.html", {"user_obj": user_obj})
+    return render(
+        request, "portal/users/user_reset_mfa_confirm.html", {"user_obj": user_obj}
+    )
 
 
 @admin_required

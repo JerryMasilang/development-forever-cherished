@@ -9,6 +9,7 @@ class MFARecoveryCode(models.Model):
     """
     Hashed recovery codes (never store plaintext). Each code is single-use.
     """
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

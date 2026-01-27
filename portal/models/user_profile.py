@@ -48,7 +48,9 @@ class UserProfile(models.Model):
     issued_number = models.PositiveIntegerField(null=True, blank=True)
 
     # --- Security / MFA ---
-    role = models.CharField(max_length=32, choices=ROLE_CHOICES, default=ROLE_DISTRIBUTOR)
+    role = models.CharField(
+        max_length=32, choices=ROLE_CHOICES, default=ROLE_DISTRIBUTOR
+    )
 
     primary_mfa_method = models.CharField(
         max_length=10,
@@ -82,6 +84,7 @@ class PasswordHistory(models.Model):
     Store recent password hashes to prevent reuse.
     We only need the last 2 (your requirement).
     """
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -98,6 +101,7 @@ class UserSession(models.Model):
     """
     Future-proof session tracking (device/IP list). You can populate gradually.
     """
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

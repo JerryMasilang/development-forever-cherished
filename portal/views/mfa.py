@@ -34,13 +34,17 @@ def mfa_setup(request):
         .first()
     )
     if device is None:
-        device = TOTPDevice.objects.create(user=request.user, name="default", confirmed=False)
+        device = TOTPDevice.objects.create(
+            user=request.user, name="default", confirmed=False
+        )
 
     if request.method == "POST":
         token = (request.POST.get("token") or "").strip()
 
         if not token:
-            messages.error(request, "Enter the 6-digit code from your authenticator app.")
+            messages.error(
+                request, "Enter the 6-digit code from your authenticator app."
+            )
             return redirect("portal:mfa_setup")
 
         if device.verify_token(token):
@@ -86,7 +90,9 @@ def mfa_verify(request):
             if action == "send":
                 try:
                     issue_email_otp(request, request.user)
-                    messages.success(request, "We sent a verification code to your email.")
+                    messages.success(
+                        request, "We sent a verification code to your email."
+                    )
                 except Exception as e:
                     messages.error(request, str(e))
                 return redirect(f"{reverse('portal:mfa_verify')}?use=email")
@@ -123,8 +129,12 @@ def mfa_verify(request):
 
     # TOTP
     device = (
-        TOTPDevice.objects.filter(user=request.user, confirmed=True).order_by("-id").first()
-        or TOTPDevice.objects.filter(user=request.user, confirmed=False).order_by("-id").first()
+        TOTPDevice.objects.filter(user=request.user, confirmed=True)
+        .order_by("-id")
+        .first()
+        or TOTPDevice.objects.filter(user=request.user, confirmed=False)
+        .order_by("-id")
+        .first()
     )
 
     if not device:
@@ -159,9 +169,15 @@ def mfa_verify(request):
 
 @login_required
 def mfa_qr_png(request):
-    device = TOTPDevice.objects.filter(user=request.user, confirmed=False).order_by("-id").first()
+    device = (
+        TOTPDevice.objects.filter(user=request.user, confirmed=False)
+        .order_by("-id")
+        .first()
+    )
     if device is None:
-        device = TOTPDevice.objects.create(user=request.user, name="default", confirmed=False)
+        device = TOTPDevice.objects.create(
+            user=request.user, name="default", confirmed=False
+        )
 
     uri = device.config_url
     img = qrcode.make(uri)
@@ -185,7 +201,11 @@ def mfa_recovery(request):
     if request.method == "POST":
         code = (request.POST.get("code") or "").strip()
         if verify_and_consume_code(request.user, code):
-            device = TOTPDevice.objects.filter(user=request.user, confirmed=True).order_by("-id").first()
+            device = (
+                TOTPDevice.objects.filter(user=request.user, confirmed=True)
+                .order_by("-id")
+                .first()
+            )
             if device:
                 otp_login(request, device)
 

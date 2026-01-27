@@ -11,7 +11,9 @@ class DistributorApplication(models.Model):
     location = models.CharField(max_length=150, blank=True)
     notes = models.TextField(blank=True)
 
-    status = models.CharField(max_length=30, default="Pending")  # Pending/Approved/Rejected
+    status = models.CharField(
+        max_length=30, default="Pending"
+    )  # Pending/Approved/Rejected
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

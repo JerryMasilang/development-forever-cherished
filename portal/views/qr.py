@@ -80,5 +80,9 @@ def qr_control_center(request):
     return render(
         request,
         "portal/qr_control_center.html",
-        {"qrs": qrs, "distributors": distributors, "can_change_status": can_change_status},
+        {
+            "qrs": qrs,
+            "distributors": distributors,
+            "can_change_status": can_change_status,
+        },
     )
