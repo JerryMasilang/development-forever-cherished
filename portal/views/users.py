@@ -1,4 +1,16 @@
+from django.contrib import messages
+from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404, redirect, render
+
+from django_otp.plugins.otp_totp.models import TOTPDevice
+
+from portal.decorators import admin_required
+from portal.forms import UserCreateForm, UserEditForm
+from portal.models import MFARecoveryCode
+from portal.utils.security import audit
+
 User = get_user_model()
+
 
 @admin_required
 def user_list(request):
@@ -23,6 +35,7 @@ def user_create(request):
 @admin_required
 def user_edit(request, user_id):
     user_obj = get_object_or_404(User, id=user_id)
+
     if request.method == "POST":
         form = UserEditForm(request.POST, instance=user_obj)
         if form.is_valid():
@@ -42,28 +55,43 @@ def user_edit(request, user_id):
 @admin_required
 def user_reset_mfa(request, user_id):
     user_obj = get_object_or_404(User, id=user_id)
+
     if request.method == "POST":
+        reason = (request.POST.get("reason") or "").strip()
+        if not reason:
+            messages.error(request, "Reason is required.")
+            return redirect("portal:user_reset_mfa", user_id=user_obj.id)
+
         TOTPDevice.objects.filter(user=user_obj).delete()
-        messages.success(request, f"MFA reset for {user_obj.username}. They must re-enroll on next login.")
+        audit(request, "RESET_MFA", target_user=user_obj, reason=reason)
+
+        messages.success(
+            request,
+            f"MFA reset for {user_obj.username}. They must re-enroll on next login.",
+        )
         return redirect("portal:user_list")
 
     return render(request, "portal/users/user_reset_mfa_confirm.html", {"user_obj": user_obj})
 
-    reason = (request.POST.get("reason") or "").strip()
-    if not reason:
-        messages.error(request, "Reason is required.")
-        return redirect("portal:user_reset_mfa", user_id=user_obj.id)
-
-    TOTPDevice.objects.filter(user=user_obj).delete()
-    audit(request, "RESET_MFA", target_user=user_obj, reason=reason)
-    messages.success(...)
-
 
 @admin_required
 def user_reset_recovery(request, user_id):
-    user_obj = get_object_or_404(get_user_model(), id=user_id)
+    user_obj = get_object_or_404(User, id=user_id)
+
     if request.method == "POST":
+        reason = (request.POST.get("reason") or "").strip()
+        if not reason:
+            messages.error(request, "Reason is required.")
+            return redirect("portal:user_reset_recovery", user_id=user_obj.id)
+
         MFARecoveryCode.objects.filter(user=user_obj).delete()
+        audit(request, "RESET_RECOVERY_CODES", target_user=user_obj, reason=reason)
+
         messages.success(request, f"Recovery codes reset for {user_obj.username}.")
         return redirect("portal:user_list")
-    return render(request, "portal/users/user_reset_recovery_confirm.html", {"user_obj": user_obj})
+
+    return render(
+        request,
+        "portal/users/user_reset_recovery_confirm.html",
+        {"user_obj": user_obj},
+    )
