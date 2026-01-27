@@ -19,7 +19,6 @@ from portal.utils.recovery_codes import (
 )
 
 
-
 @login_required
 def mfa_setup(request):
     confirmed_device = (
@@ -220,9 +219,6 @@ def mfa_recovery(request):
     return render(request, "portal/mfa_recovery.html")
 
 
-
-
-
 # @login_required
 # def mfa_recovery(request):
 #     """
@@ -263,4 +259,3 @@ def recovery_codes_generate(request):
         return render(request, "portal/profile/recovery_codes.html", {"codes": codes})
 
     return render(request, "portal/profile/recovery_codes.html", {"codes": None})
-

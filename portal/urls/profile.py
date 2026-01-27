@@ -10,7 +10,6 @@ from portal.views.profile import (
     email_change_confirm,
 )
 
-
 urlpatterns = [
     # We'll move your existing routes here next
     # Profile / Recovery Codes

@@ -19,11 +19,6 @@ from portal.forms import ProfileSettingsForm, PortalPasswordChangeForm
 from portal.utils.security import audit, step_up_is_verified
 
 
-
-
-
-
-
 @login_required
 def profile(request):
     active_tab = request.GET.get("tab", "general")
@@ -48,6 +43,7 @@ def profile(request):
         "portal/profile.html",
         {"active_tab": active_tab, "email_form": email_form},
     )
+
 
 def _get_user_sessions(user, current_session_key: str | None):
     """
@@ -81,11 +77,8 @@ def _get_user_sessions(user, current_session_key: str | None):
     return sessions
 
 
-
-
 def _terminate_session(session_key: str):
     Session.objects.filter(session_key=session_key).delete()
-
 
 
 @login_required
@@ -304,9 +297,6 @@ def profile_settings(request):
             "active_tab": active_tab,  # ✅ ALWAYS pass it
         },
     )
-
-
-
 
 
 @login_required

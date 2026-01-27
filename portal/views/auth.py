@@ -9,9 +9,6 @@ from portal.forms import DistributorApplicationForm, PortalAuthenticationForm
 from portal.utils.security import audit, get_client_ip, rate_limit_hit
 
 
-
-
-
 class PortalLoginView(LoginView):
     template_name = "portal/login.html"
     authentication_form = PortalAuthenticationForm
@@ -64,4 +61,3 @@ class RateLimitedPasswordResetView(PasswordResetView):
 
         # ✅ ALLOW: normal Django behavior (sends email)
         return super().form_valid(form)
-

@@ -72,7 +72,9 @@ class PortalPasswordChangeForm(PasswordChangeForm):
         if not new_pwd:
             return new_pwd
 
-        recent = PasswordHistory.objects.filter(user=self.user).order_by("-created_at")[:2]
+        recent = PasswordHistory.objects.filter(user=self.user).order_by("-created_at")[
+            :2
+        ]
         from django.contrib.auth.hashers import check_password
 
         for item in recent:

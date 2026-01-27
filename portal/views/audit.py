@@ -9,8 +9,6 @@ from portal.decorators.roles import roles_required
 from portal.models import AuditLog
 
 
-
-
 @login_required
 @roles_required("Administrator", "Manager")
 def audit_log_view(request):
