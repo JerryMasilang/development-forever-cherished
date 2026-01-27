@@ -75,7 +75,8 @@ def password_change_email_alert(sender, instance: User, **kwargs):
         send_mail(
             subject,
             body,
-            getattr(settings, "DEFAULT_FROM_EMAIL", None) or "no-reply@forevercherished.online",
+            getattr(settings, "DEFAULT_FROM_EMAIL", None)
+            or "no-reply@forevercherished.online",
             [instance.email],
             fail_silently=True,
         )

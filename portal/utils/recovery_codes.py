@@ -30,7 +30,9 @@ def replace_user_codes(user, plain_codes: Iterable[str]) -> None:
 
 def verify_and_consume_code(user, code: str) -> bool:
     h = _hash_code(code)
-    rc = MFARecoveryCode.objects.filter(user=user, code_hash=h, used_at__isnull=True).first()
+    rc = MFARecoveryCode.objects.filter(
+        user=user, code_hash=h, used_at__isnull=True
+    ).first()
     if not rc:
         return False
     rc.used_at = timezone.now()

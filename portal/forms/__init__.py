@@ -1,11 +1,18 @@
-from .auth import PortalAuthenticationForm, DistributorApplicationForm
-from .users import UserCreateForm, UserEditForm
-from .profile import EmailChangeForm
+from .auth import (
+    PortalAuthenticationForm,
+    PortalPasswordResetForm,
+    PortalPasswordChangeForm,
+)
+from .users import UserCreateForm, UserEditForm, DistributorApplicationForm
+from .profile import ProfileSettingsForm, EmailChangeForm
 
 __all__ = [
     "PortalAuthenticationForm",
-    "DistributorApplicationForm",
+    "PortalPasswordResetForm",
+    "PortalPasswordChangeForm",
     "UserCreateForm",
     "UserEditForm",
+    "DistributorApplicationForm",
+    "ProfileSettingsForm",
     "EmailChangeForm",
 ]

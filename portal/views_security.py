@@ -30,8 +30,6 @@ from portal.utils.security import step_up_is_verified
 from urllib.parse import unquote
 
 
-
-
 from portal.utils.security import (
     audit,
     generate_recovery_codes,
@@ -49,7 +47,11 @@ def mfa_recovery(request):
         code = (request.POST.get("code") or "").strip()
         if verify_and_consume_recovery_code(request.user, code):
             # Satisfy OTP by attaching a confirmed device if it exists
-            device = TOTPDevice.objects.filter(user=request.user, confirmed=True).order_by("-id").first()
+            device = (
+                TOTPDevice.objects.filter(user=request.user, confirmed=True)
+                .order_by("-id")
+                .first()
+            )
             if device:
                 otp_login(request, device)
 
@@ -99,10 +101,9 @@ class RateLimitedPasswordResetView(PasswordResetView):
         ip_key = f"pwreset:ip:{ip}"
         email_key = f"pwreset:email:{email}" if email else "pwreset:email:unknown"
 
-        blocked = (
-            rate_limit_hit(ip_key, self.LIMIT_IP, self.WINDOW_SECONDS)
-            or rate_limit_hit(email_key, self.LIMIT_EMAIL, self.WINDOW_SECONDS)
-        )
+        blocked = rate_limit_hit(
+            ip_key, self.LIMIT_IP, self.WINDOW_SECONDS
+        ) or rate_limit_hit(email_key, self.LIMIT_EMAIL, self.WINDOW_SECONDS)
 
         # 🚫 BLOCK: do NOT send email
         if blocked:
@@ -111,7 +112,6 @@ class RateLimitedPasswordResetView(PasswordResetView):
 
         # ✅ ALLOW: normal Django behavior (sends email)
         return super().form_valid(form)
-    
 
 
 def _get_user_sessions(user, current_session_key: str | None):
@@ -126,18 +126,21 @@ def _get_user_sessions(user, current_session_key: str | None):
         if str(data.get("_auth_user_id")) != str(user.pk):
             continue
 
-        sessions.append({
-            "session_key": s.session_key,
-            "is_current": (s.session_key == current_session_key),
-            "expire_date": s.expire_date,
-            "last_seen": data.get("last_seen", ""),
-            "ip": data.get("ip", ""),
-            "ua": data.get("ua", ""),
-        })
+        sessions.append(
+            {
+                "session_key": s.session_key,
+                "is_current": (s.session_key == current_session_key),
+                "expire_date": s.expire_date,
+                "last_seen": data.get("last_seen", ""),
+                "ip": data.get("ip", ""),
+                "ua": data.get("ua", ""),
+            }
+        )
 
     # Sort: current first, then by last_seen desc-ish
     def sort_key(x):
         return (0 if x["is_current"] else 1, x["last_seen"] or "")
+
     sessions.sort(key=sort_key)
 
     return sessions
@@ -145,8 +148,6 @@ def _get_user_sessions(user, current_session_key: str | None):
 
 def _terminate_session(session_key: str):
     Session.objects.filter(session_key=session_key).delete()
-
-
 
 
 def _get_user_sessions(user, current_session_key: str | None):
@@ -156,24 +157,26 @@ def _get_user_sessions(user, current_session_key: str | None):
         data = s.get_decoded()
         if str(data.get("_auth_user_id")) != str(user.pk):
             continue
-        sessions.append({
-            "session_key": s.session_key,
-            "is_current": (s.session_key == current_session_key),
-            "expire_date": s.expire_date,
-            "last_seen": data.get("last_seen", ""),
-            "ip": data.get("ip", ""),
-            "ua": data.get("ua", ""),
-        })
+        sessions.append(
+            {
+                "session_key": s.session_key,
+                "is_current": (s.session_key == current_session_key),
+                "expire_date": s.expire_date,
+                "last_seen": data.get("last_seen", ""),
+                "ip": data.get("ip", ""),
+                "ua": data.get("ua", ""),
+            }
+        )
 
     def sort_key(x):
         return (0 if x["is_current"] else 1, x["last_seen"] or "")
+
     sessions.sort(key=sort_key)
     return sessions
 
 
 def _terminate_session(session_key: str):
     Session.objects.filter(session_key=session_key).delete()
-
 
 
 @login_required
@@ -191,10 +194,7 @@ def profile_settings(request):
         # =========================
         if action == "profile":
             form = ProfileSettingsForm(
-                request.POST,
-                request.FILES,
-                instance=profile,
-                request_user=request.user
+                request.POST, request.FILES, instance=profile, request_user=request.user
             )
             pwd_form = PortalPasswordChangeForm(request.user)
 
@@ -218,23 +218,31 @@ def profile_settings(request):
             if not request.user.check_password(old_pwd):
                 pwd_form.add_error("old_password", "Incorrect old password.")
                 sessions = _get_user_sessions(request.user, request.session.session_key)
-                return render(request, "portal/profile/settings.html", {
-                    "profile": profile,
-                    "form": form,
-                    "pwd_form": pwd_form,
-                    "sessions": sessions,
-                    "active_tab": "security",
-                })
+                return render(
+                    request,
+                    "portal/profile/settings.html",
+                    {
+                        "profile": profile,
+                        "form": form,
+                        "pwd_form": pwd_form,
+                        "sessions": sessions,
+                        "active_tab": "security",
+                    },
+                )
 
             if not pwd_form.is_valid():
                 sessions = _get_user_sessions(request.user, request.session.session_key)
-                return render(request, "portal/profile/settings.html", {
-                    "profile": profile,
-                    "form": form,
-                    "pwd_form": pwd_form,
-                    "sessions": sessions,
-                    "active_tab": "security",
-                })
+                return render(
+                    request,
+                    "portal/profile/settings.html",
+                    {
+                        "profile": profile,
+                        "form": form,
+                        "pwd_form": pwd_form,
+                        "sessions": sessions,
+                        "active_tab": "security",
+                    },
+                )
 
             # ✅ correct purpose for password is change_password
             if not step_up_is_verified(request, "change_password"):
@@ -284,39 +292,61 @@ def profile_settings(request):
 
             # Basic validation
             if not new_email or "@" not in new_email:
-                return render(request, "portal/profile/settings.html", {
-                    "profile": profile,
-                    "form": form,
-                    "pwd_form": pwd_form,
-                    "active_tab": "security",
-                    "new_email": new_email,
-                    "email_error": "Enter a valid email address.",
-                    "sessions": _get_user_sessions(request.user, request.session.session_key),
-                })
+                return render(
+                    request,
+                    "portal/profile/settings.html",
+                    {
+                        "profile": profile,
+                        "form": form,
+                        "pwd_form": pwd_form,
+                        "active_tab": "security",
+                        "new_email": new_email,
+                        "email_error": "Enter a valid email address.",
+                        "sessions": _get_user_sessions(
+                            request.user, request.session.session_key
+                        ),
+                    },
+                )
 
             # Don't allow same email
             if request.user.email and new_email == request.user.email.lower():
-                return render(request, "portal/profile/settings.html", {
-                    "profile": profile,
-                    "form": form,
-                    "pwd_form": pwd_form,
-                    "active_tab": "security",
-                    "new_email": new_email,
-                    "email_error": "That is already your current email.",
-                    "sessions": _get_user_sessions(request.user, request.session.session_key),
-                })
+                return render(
+                    request,
+                    "portal/profile/settings.html",
+                    {
+                        "profile": profile,
+                        "form": form,
+                        "pwd_form": pwd_form,
+                        "active_tab": "security",
+                        "new_email": new_email,
+                        "email_error": "That is already your current email.",
+                        "sessions": _get_user_sessions(
+                            request.user, request.session.session_key
+                        ),
+                    },
+                )
 
             # Prevent duplicate email across users
-            if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
-                return render(request, "portal/profile/settings.html", {
-                    "profile": profile,
-                    "form": form,
-                    "pwd_form": pwd_form,
-                    "active_tab": "security",
-                    "new_email": new_email,
-                    "email_error": "That email is already in use by another account.",
-                    "sessions": _get_user_sessions(request.user, request.session.session_key),
-                })
+            if (
+                User.objects.filter(email__iexact=new_email)
+                .exclude(id=request.user.id)
+                .exists()
+            ):
+                return render(
+                    request,
+                    "portal/profile/settings.html",
+                    {
+                        "profile": profile,
+                        "form": form,
+                        "pwd_form": pwd_form,
+                        "active_tab": "security",
+                        "new_email": new_email,
+                        "email_error": "That email is already in use by another account.",
+                        "sessions": _get_user_sessions(
+                            request.user, request.session.session_key
+                        ),
+                    },
+                )
 
             # Always overwrite pending email
             request.session["pending_new_email"] = new_email
@@ -353,15 +383,18 @@ def profile_settings(request):
     sessions = _get_user_sessions(request.user, request.session.session_key)
     email_msg = (request.GET.get("email_msg") or "").strip()
 
-    return render(request, "portal/profile/settings.html", {
-        "profile": profile,
-        "form": form,
-        "pwd_form": pwd_form,
-        "sessions": sessions,
-        "email_msg": email_msg,
-        "active_tab": active_tab,  # ✅ ALWAYS pass it
-    })
-
+    return render(
+        request,
+        "portal/profile/settings.html",
+        {
+            "profile": profile,
+            "form": form,
+            "pwd_form": pwd_form,
+            "sessions": sessions,
+            "email_msg": email_msg,
+            "active_tab": active_tab,  # ✅ ALWAYS pass it
+        },
+    )
 
 
 @login_required
@@ -374,10 +407,15 @@ def request_email_change(request):
         if not form.is_valid():
             return render(request, "portal/profile/email_change.html", {"form": form})
         User = get_user_model()
-        if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
-            form.add_error("new_email", "That email is already in use by another account.")
+        if (
+            User.objects.filter(email__iexact=new_email)
+            .exclude(id=request.user.id)
+            .exists()
+        ):
+            form.add_error(
+                "new_email", "That email is already in use by another account."
+            )
             return render(request, "portal/profile/email_change.html", {"form": form})
-
 
         # Require step-up
         if not step_up_is_verified(request, "change_email"):
@@ -387,7 +425,6 @@ def request_email_change(request):
                 f"?purpose=change_email&next={quote(next_target, safe='')}"
             )
             return redirect(verify_url)
-
 
         # Step-up passed → create token
         new_email = form.cleaned_data["new_email"]
@@ -420,7 +457,6 @@ def request_email_change(request):
     return render(request, "portal/profile/email_change.html", {"form": form})
 
 
-
 @login_required
 def confirm_email_change(request, token):
     profile = request.user.profile
@@ -429,27 +465,36 @@ def confirm_email_change(request, token):
         messages.error(request, "Invalid or expired email change link.")
         return redirect("portal:settings")
 
-
     User = get_user_model()
 
-# Final safety check: prevent duplicate email
-    if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
+    # Final safety check: prevent duplicate email
+    if (
+        User.objects.filter(email__iexact=new_email)
+        .exclude(id=request.user.id)
+        .exists()
+    ):
         messages.error(request, "That email is already in use by another account.")
         request.session.pop("pending_new_email", None)
         return redirect(reverse_lazy("portal:settings") + "?tab=security")
     request.user.email = profile.pending_email
     request.user.save()
     User = get_user_model()
-    if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
+    if (
+        User.objects.filter(email__iexact=new_email)
+        .exclude(id=request.user.id)
+        .exists()
+    ):
         messages.error(request, "That email is already in use. Please try another.")
         # also clear any pending token/session so user retries cleanly
         request.session.pop("pending_new_email", None)
         return redirect(reverse_lazy("portal:settings") + "?tab=security")
 
-
-
     User = get_user_model()
-    if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
+    if (
+        User.objects.filter(email__iexact=new_email)
+        .exclude(id=request.user.id)
+        .exists()
+    ):
         messages.error(request, "That email is already in use. Please try another.")
         # also clear any pending token/session so user retries cleanly
         request.session.pop("pending_new_email", None)
@@ -463,7 +508,6 @@ def confirm_email_change(request, token):
     audit(request, "EMAIL_CHANGED", target_user=request.user)
     messages.success(request, "Your email address has been updated.")
     return redirect("portal:settings")
-
 
 
 @login_required
@@ -480,12 +524,15 @@ def stepup_verify(request):
 
     # ✅ validate using URL WITHOUT fragment
     next_url_for_check = next_url.split("#", 1)[0]
-    if not url_has_allowed_host_and_scheme(next_url_for_check, allowed_hosts={request.get_host()}):
+    if not url_has_allowed_host_and_scheme(
+        next_url_for_check, allowed_hosts={request.get_host()}
+    ):
         next_url = str(reverse_lazy("portal:settings"))
 
     method = (request.POST.get("method") or request.GET.get("method") or "").strip()
 
     from portal.utils.security import step_up_is_verified, step_up_mark_verified
+
     if step_up_is_verified(request, purpose):
         return redirect(next_url)
 
@@ -500,7 +547,9 @@ def stepup_verify(request):
         )
         if not device:
             messages.error(request, "No authenticator is configured for your account.")
-            return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}")
+            return redirect(
+                f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}"
+            )
 
         if device.verify_token(code):
             step_up_mark_verified(request, purpose)
@@ -510,7 +559,9 @@ def stepup_verify(request):
 
         audit(request, "STEPUP_TOTP_FAILED", target_user=request.user)
         messages.error(request, "Invalid authenticator code.")
-        return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}")
+        return redirect(
+            f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}"
+        )
 
     # --- Email OTP send/verify ---
     from portal.utils.security import email_otp_issue, email_otp_verify, email_otp_clear
@@ -518,7 +569,9 @@ def stepup_verify(request):
     if request.method == "POST" and method == "email_send":
         if not request.user.email:
             messages.error(request, "No email is set for your account.")
-            return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}")
+            return redirect(
+                f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}"
+            )
 
         code = email_otp_issue(request, purpose)
 
@@ -528,11 +581,19 @@ def stepup_verify(request):
             f"This code expires in {getattr(settings, 'EMAIL_OTP_TTL_SECONDS', 300)//60} minutes.\n"
             f"If you did not request this, you can ignore this email."
         )
-        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [request.user.email], fail_silently=True)
+        send_mail(
+            subject,
+            body,
+            settings.DEFAULT_FROM_EMAIL,
+            [request.user.email],
+            fail_silently=True,
+        )
 
         audit(request, "STEPUP_EMAIL_OTP_SENT", target_user=request.user)
         messages.info(request, "We sent a verification code to your email.")
-        return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}&method=email_verify")
+        return redirect(
+            f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}&method=email_verify"
+        )
 
     if request.method == "POST" and method == "email_verify":
         code = (request.POST.get("code") or "").strip()
@@ -545,23 +606,26 @@ def stepup_verify(request):
 
         audit(request, "STEPUP_EMAIL_FAILED", target_user=request.user)
         messages.error(request, "Invalid or expired email code.")
-        return redirect(f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}&method=email_verify")
+        return redirect(
+            f"{reverse_lazy('portal:stepup_verify')}?purpose={purpose}&next={raw_next}&method=email_verify"
+        )
 
     return render(
         request,
         "portal/profile/stepup_verify.html",
         {
             "purpose": purpose,
-            "next_url": next_url,   # decoded (safe for Cancel button)
+            "next_url": next_url,  # decoded (safe for Cancel button)
             "method": method,
-            "has_totp": TOTPDevice.objects.filter(user=request.user, confirmed=True).exists(),
+            "has_totp": TOTPDevice.objects.filter(
+                user=request.user, confirmed=True
+            ).exists(),
             "has_email": bool(request.user.email),
         },
     )
 
 
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
-
 
 
 @login_required
@@ -587,9 +651,10 @@ def email_change_verify(request):
     # token payload: "<jti>|<email>"
     token = signer.sign(f"{jti}|{new_email}")
 
-    confirm_url = request.build_absolute_uri(
-        reverse_lazy("portal:email_change_confirm")
-    ) + f"?token={quote(token)}"
+    confirm_url = (
+        request.build_absolute_uri(reverse_lazy("portal:email_change_confirm"))
+        + f"?token={quote(token)}"
+    )
 
     subject = "Confirm your new email - Forever Cherished QR Portal"
     body = (
@@ -597,68 +662,112 @@ def email_change_verify(request):
         f"This link expires in 30 minutes."
     )
 
-    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [new_email], fail_silently=False)
+    send_mail(
+        subject, body, settings.DEFAULT_FROM_EMAIL, [new_email], fail_silently=False
+    )
     audit(request, "EMAIL_CHANGE_REQUESTED", target_user=request.user)
 
     msg = quote(f"We sent a confirmation link to {new_email}.")
-    return redirect(str(reverse_lazy("portal:settings")) + f"?tab=security&scroll=top&email_msg={msg}")
+    return redirect(
+        str(reverse_lazy("portal:settings"))
+        + f"?tab=security&scroll=top&email_msg={msg}"
+    )
 
 
 @login_required
 def email_change_confirm(request):
     token = (request.GET.get("token") or "").strip()
     if not token:
-        return render(request, "portal/profile/email_change_error.html", {
-            "title": "Invalid link",
-            "message": "This confirmation link is invalid. Please request a new email change.",
-        }, status=400)
+        return render(
+            request,
+            "portal/profile/email_change_error.html",
+            {
+                "title": "Invalid link",
+                "message": "This confirmation link is invalid. Please request a new email change.",
+            },
+            status=400,
+        )
 
     signer = TimestampSigner()
 
     try:
-        payload = signer.unsign(token, max_age= 60 * 30)  # 30 minutes
+        payload = signer.unsign(token, max_age=60 * 30)  # 30 minutes
         jti, new_email = payload.split("|", 1)
         new_email = new_email.strip().lower()
     except SignatureExpired:
         audit(request, "EMAIL_VERIFY_FAILED", target_user=request.user)
-        return render(request, "portal/profile/email_change_error.html", {
-            "title": "Link expired",
-            "message": "This confirmation link has expired. Please request a new email change.",
-        }, status=400)
+        return render(
+            request,
+            "portal/profile/email_change_error.html",
+            {
+                "title": "Link expired",
+                "message": "This confirmation link has expired. Please request a new email change.",
+            },
+            status=400,
+        )
     except (BadSignature, ValueError):
         audit(request, "EMAIL_VERIFY_FAILED", target_user=request.user)
-        return render(request, "portal/profile/email_change_error.html", {
-            "title": "Invalid link",
-            "message": "This confirmation link is invalid. Please request a new email change.",
-        }, status=400)
+        return render(
+            request,
+            "portal/profile/email_change_error.html",
+            {
+                "title": "Invalid link",
+                "message": "This confirmation link is invalid. Please request a new email change.",
+            },
+            status=400,
+        )
 
     profile = getattr(request.user, "profile", None)
     if profile is None:
-        return render(request, "portal/profile/email_change_error.html", {
-            "title": "Profile missing",
-            "message": "We could not validate this request. Please request a new email change.",
-        }, status=400)
+        return render(
+            request,
+            "portal/profile/email_change_error.html",
+            {
+                "title": "Profile missing",
+                "message": "We could not validate this request. Please request a new email change.",
+            },
+            status=400,
+        )
 
     # ✅ Single-use enforcement
     if not profile.email_change_token_jti or profile.email_change_token_jti != jti:
-        return render(request, "portal/profile/email_change_error.html", {
-            "title": "Link already used",
-            "message": "This confirmation link has already been used. Please request a new email change.",
-        }, status=400)
+        return render(
+            request,
+            "portal/profile/email_change_error.html",
+            {
+                "title": "Link already used",
+                "message": "This confirmation link has already been used. Please request a new email change.",
+            },
+            status=400,
+        )
 
     if profile.email_change_token_used_at is not None:
-        return render(request, "portal/profile/email_change_error.html", {
-            "title": "Link already used",
-            "message": "This confirmation link has already been used. Please request a new email change.",
-        }, status=400)
+        return render(
+            request,
+            "portal/profile/email_change_error.html",
+            {
+                "title": "Link already used",
+                "message": "This confirmation link has already been used. Please request a new email change.",
+            },
+            status=400,
+        )
 
     # ✅ Duplicate check BEFORE saving
     User = get_user_model()
-    if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
-        return render(request, "portal/profile/email_change_error.html", {
-            "title": "Email already in use",
-            "message": "That email is already in use by another account. Please request a new email change.",
-        }, status=400)
+    if (
+        User.objects.filter(email__iexact=new_email)
+        .exclude(id=request.user.id)
+        .exists()
+    ):
+        return render(
+            request,
+            "portal/profile/email_change_error.html",
+            {
+                "title": "Email already in use",
+                "message": "That email is already in use by another account. Please request a new email change.",
+            },
+            status=400,
+        )
 
     # ✅ Apply
     request.user.email = new_email
@@ -691,11 +800,11 @@ def audit_log_view(request):
 
     if q:
         qs = qs.filter(
-            Q(action__icontains=q) |
-            Q(reason__icontains=q) |
-            Q(ip__icontains=q) |
-            Q(actor__email__icontains=q) |
-            Q(target_user__email__icontains=q)
+            Q(action__icontains=q)
+            | Q(reason__icontains=q)
+            | Q(ip__icontains=q)
+            | Q(actor__email__icontains=q)
+            | Q(target_user__email__icontains=q)
         )
 
     if action:
@@ -720,16 +829,22 @@ def audit_log_view(request):
 
     # For action dropdown
     action_choices = (
-        AuditLog.objects.values_list("action", flat=True)
-        .distinct()
-        .order_by("action")
+        AuditLog.objects.values_list("action", flat=True).distinct().order_by("action")
     )
 
-    return render(request, "portal/audit/audit_list.html", {
-        "page_obj": page_obj,
-        "action_choices": action_choices,
-        "filters": {
-            "q": q, "action": action, "actor": actor, "target": target,
-            "from": date_from, "to": date_to,
-        }
-    })
+    return render(
+        request,
+        "portal/audit/audit_list.html",
+        {
+            "page_obj": page_obj,
+            "action_choices": action_choices,
+            "filters": {
+                "q": q,
+                "action": action,
+                "actor": actor,
+                "target": target,
+                "from": date_from,
+                "to": date_to,
+            },
+        },
+    )

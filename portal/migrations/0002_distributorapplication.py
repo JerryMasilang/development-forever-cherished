@@ -6,22 +6,30 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('portal', '0001_initial'),
+        ("portal", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='DistributorApplication',
+            name="DistributorApplication",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('full_name', models.CharField(max_length=150)),
-                ('email', models.EmailField(max_length=254)),
-                ('mobile', models.CharField(blank=True, max_length=30)),
-                ('company_name', models.CharField(blank=True, max_length=150)),
-                ('location', models.CharField(blank=True, max_length=150)),
-                ('notes', models.TextField(blank=True)),
-                ('status', models.CharField(default='Pending', max_length=30)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("full_name", models.CharField(max_length=150)),
+                ("email", models.EmailField(max_length=254)),
+                ("mobile", models.CharField(blank=True, max_length=30)),
+                ("company_name", models.CharField(blank=True, max_length=150)),
+                ("location", models.CharField(blank=True, max_length=150)),
+                ("notes", models.TextField(blank=True)),
+                ("status", models.CharField(default="Pending", max_length=30)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
         ),
     ]

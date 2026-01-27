@@ -1,7 +1,11 @@
-
-
 from django.urls import path
-from portal.views.mfa import mfa_setup, mfa_verify, mfa_qr_png, mfa_recovery, mfa_recovery_codes
+from portal.views.mfa import (
+    mfa_setup,
+    mfa_verify,
+    mfa_qr_png,
+    mfa_recovery,
+    mfa_recovery_codes,
+)
 
 urlpatterns = [
     path("setup/", mfa_setup, name="mfa_setup"),

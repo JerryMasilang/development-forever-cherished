@@ -5,7 +5,6 @@
 # # from portal.views. import PortalPasswordResetForm
 
 
-
 # urlpatterns = [
 #     # We'll move your existing routes here next
 #         path("login/", views.PortalLoginView.as_view(), name="login"),
@@ -55,6 +54,10 @@ from django.urls import reverse_lazy
 
 urlpatterns = [
     path("login/", PortalLoginView.as_view(), name="login"),
-    path("logout/", auth_views.LogoutView.as_view(next_page=reverse_lazy("portal:login")), name="logout"),
+    path(
+        "logout/",
+        auth_views.LogoutView.as_view(next_page=reverse_lazy("portal:login")),
+        name="logout",
+    ),
     path("distributor/apply/", distributor_apply, name="distributor_apply"),
 ]

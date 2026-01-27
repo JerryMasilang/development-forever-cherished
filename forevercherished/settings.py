@@ -53,11 +53,11 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "portal.middleware_sessions.SessionActivityMiddleware", 
+    "portal.middleware.sessions.SessionActivityMiddleware", 
     "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "portal.middleware.EnforceMFAMiddleware",
+    "portal.middleware.mfa.EnforceMFAMiddleware",
 ]
 
 

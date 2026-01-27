@@ -35,7 +35,9 @@ def replace_recovery_codes(user, plaintext_codes: Iterable[str]) -> None:
 
 def verify_and_consume_recovery_code(user, code: str) -> bool:
     h = sha256_hex(code)
-    obj = MFARecoveryCode.objects.filter(user=user, code_hash=h, used_at__isnull=True).first()
+    obj = MFARecoveryCode.objects.filter(
+        user=user, code_hash=h, used_at__isnull=True
+    ).first()
     if not obj:
         return False
     obj.used_at = timezone.now()
@@ -53,7 +55,11 @@ def get_client_ip(request) -> str:
 def audit(request, action: str, target_user=None, reason: str = "") -> None:
     try:
         AuditLog.objects.create(
-            actor=getattr(request, "user", None) if getattr(request, "user", None) and request.user.is_authenticated else None,
+            actor=(
+                getattr(request, "user", None)
+                if getattr(request, "user", None) and request.user.is_authenticated
+                else None
+            ),
             action=action,
             target_user=target_user,
             reason=reason or "",
@@ -83,8 +89,10 @@ def rate_limit_hit(key: str, limit: int, window_seconds: int) -> bool:
 def _otp_cache_key(user_id: int) -> str:
     return f"mfa:email:otp:{user_id}"
 
+
 def _otp_attempts_key(user_id: int) -> str:
     return f"mfa:email:attempts:{user_id}"
+
 
 def issue_email_otp(request, user, ttl_seconds: int = 300) -> None:
     ip = get_client_ip(request) or "unknown"
@@ -112,6 +120,7 @@ def issue_email_otp(request, user, ttl_seconds: int = 300) -> None:
 
     audit(request, "MFA_EMAIL_OTP_SENT", target_user=user)
 
+
 def verify_email_otp(request, user, code: str, max_attempts: int = 6) -> bool:
     stored = cache.get(_otp_cache_key(user.id))
     if not stored:
@@ -131,10 +140,10 @@ def verify_email_otp(request, user, code: str, max_attempts: int = 6) -> bool:
     return ok
 
 
-
 def step_up_mark_verified(request, purpose: str):
     ttl = getattr(settings, "STEP_UP_TTL_SECONDS", 300)
     request.session[f"stepup:{purpose}"] = int(time.time()) + ttl
+
 
 def step_up_is_verified(request, purpose: str) -> bool:
     exp = request.session.get(f"stepup:{purpose}")
@@ -145,8 +154,10 @@ def step_up_is_verified(request, purpose: str) -> bool:
     except Exception:
         return False
 
+
 def step_up_clear(request, purpose: str):
     request.session.pop(f"stepup:{purpose}", None)
+
 
 def email_otp_issue(request, purpose: str) -> str:
     """
@@ -158,6 +169,7 @@ def email_otp_issue(request, purpose: str) -> str:
     request.session[f"emailotp:{purpose}:exp"] = int(time.time()) + ttl
     request.session[f"emailotp:{purpose}:tries"] = 0
     return code
+
 
 def email_otp_verify(request, purpose: str, code: str) -> bool:
     stored = request.session.get(f"emailotp:{purpose}:code")
@@ -174,7 +186,8 @@ def email_otp_verify(request, purpose: str, code: str) -> bool:
     if int(exp) < int(time.time()):
         return False
 
-    return (stored == (code or "").strip())
+    return stored == (code or "").strip()
+
 
 def email_otp_clear(request, purpose: str):
     request.session.pop(f"emailotp:{purpose}:code", None)
@@ -205,7 +218,7 @@ def audit(request, action: str, target_user=None, reason: str = "", meta=None):
     except Exception:
         # never block the request due to logging failures
         pass
-    
+
 
 NOTIFICATION_ACTIONS = {
     "PASSWORD_CHANGED",
@@ -219,6 +232,7 @@ NOTIFICATION_ACTIONS = {
     "DISTRIBUTOR_APPROVED",
     "DISTRIBUTOR_REJECTED",
 }
+
 
 def get_notifications_for_user(user, since_minutes=1440):
     """
@@ -240,6 +254,4 @@ def get_notifications_for_user(user, since_minutes=1440):
         return qs.select_related("actor", "target_user")[:20]
 
     # Regular users only see events affecting them
-    return qs.filter(
-        target_user=user
-    ).select_related("actor", "target_user")[:20]
+    return qs.filter(target_user=user).select_related("actor", "target_user")[:20]

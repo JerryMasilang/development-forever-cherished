@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
-from portal.forms import EmailChangeForm
+from portal.forms.__init__ import EmailChangeForm
 
 
 @login_required

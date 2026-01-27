@@ -5,8 +5,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from portal.decorators import admin_required
-from portal.forms import UserCreateForm, UserEditForm
-from portal.models import MFARecoveryCode
+from portal.forms.__init__ import UserCreateForm, UserEditForm
+from portal.models.__init__ import MFARecoveryCode
 from portal.utils.security import audit
 
 User = get_user_model()
