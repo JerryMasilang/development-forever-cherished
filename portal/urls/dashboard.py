@@ -1,8 +1,7 @@
 from django.urls import path
-from . import views
+from portal.views.dashboard import dashboard
 
 urlpatterns = [
-    # We'll move your existing routes here next
-    path("", views.dashboard, name="dashboard"),
-    path("dashboard/", views.dashboard, name="dashboard_page"),
+    path("", dashboard, name="dashboard"),
+    path("dashboard/", dashboard, name="dashboard_page"),
 ]

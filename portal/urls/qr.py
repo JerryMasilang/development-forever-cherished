@@ -1,17 +1,7 @@
 from django.urls import path
-from . import views
-from portal import views  # TEMP: still using old views.py
-
-
-
-from django.contrib.auth import views as auth_views
-
-
+from portal.views.qr import qr_control_center, qr_png
 
 urlpatterns = [
-    # We'll move your existing routes here next
-        # QR
-    path("qr/", views.qr_control_center, name="qr_control_center"),
-    path("qr/png/<str:qr_id>/", views.qr_png, name="qr_png"),
- 
+    path("", qr_control_center, name="qr_control_center"),
+    path("png/<str:qr_id>/", qr_png, name="qr_png"),
 ]

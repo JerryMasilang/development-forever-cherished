@@ -1,20 +1,12 @@
+
+
 from django.urls import path
-from . import views
-
-
-from django.contrib.auth import views
-from django.urls import path,include, reverse_lazy
-from portal import views_security
-
-
+from portal.views.mfa import mfa_setup, mfa_verify, mfa_qr_png, mfa_recovery, mfa_recovery_codes
 
 urlpatterns = [
-    # We'll move your existing routes here next
-    # MFA (PRIMARY + VERIFY)
-    path("mfa/setup/", views.mfa_setup, name="mfa_setup"),
-    path("mfa/verify/", views.mfa_verify, name="mfa_verify"),
-    path("mfa/qr.png", views.mfa_qr_png, name="mfa_qr_png"),
-    # MFA Recovery (SECURITY MODULE ONLY)
-    path("mfa/recovery/", views_security.mfa_recovery, name="mfa_recovery"),
+    path("setup/", mfa_setup, name="mfa_setup"),
+    path("verify/", mfa_verify, name="mfa_verify"),
+    path("qr.png", mfa_qr_png, name="mfa_qr_png"),
+    path("recovery/", mfa_recovery, name="mfa_recovery"),
+    path("recovery-codes/", mfa_recovery_codes, name="mfa_recovery_codes"),
 ]
-
