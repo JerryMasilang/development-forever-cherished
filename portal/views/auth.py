@@ -1,17 +1,15 @@
-LoginView
-from .forms import DistributorApplicationForm,PortalAuthenticationForm,
 from django.contrib import messages
-from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib.auth.views import LoginView
+from django.shortcuts import redirect, render
 
+from portal.forms import DistributorApplicationForm, PortalAuthenticationForm
 
-User = get_user_model()
 
 class PortalLoginView(LoginView):
     template_name = "portal/login.html"
     authentication_form = PortalAuthenticationForm
-# -------------------------
-# Distributor application
-# -------------------------
+
+
 def distributor_apply(request):
     if request.method == "POST":
         form = DistributorApplicationForm(request.POST)
@@ -23,4 +21,3 @@ def distributor_apply(request):
         form = DistributorApplicationForm()
 
     return render(request, "portal/auth/distributor_apply.html", {"form": form})
-

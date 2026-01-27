@@ -1,5 +1,6 @@
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
 
-User = get_user_model()
 
 @login_required
 def dashboard(request):
@@ -13,3 +14,7 @@ def dashboard(request):
     }
     alerts = []
     return render(request, "portal/dashboard.html", {"kpi": kpi, "alerts": alerts})
+
+
+
+
