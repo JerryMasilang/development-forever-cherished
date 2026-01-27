@@ -47,6 +47,7 @@ def mfa_setup(request):
             device.confirmed = True
             device.save(update_fields=["confirmed"])
             otp_login(request, device)
+
             messages.success(request, "Authenticator activated.")
             return redirect("portal:dashboard")
 

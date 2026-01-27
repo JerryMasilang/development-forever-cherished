@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 User = get_user_model()
 
 @admin_required
