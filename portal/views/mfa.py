@@ -1,11 +1,13 @@
-from io import BytesIO
+from __future__ import annotations
 
+from io import BytesIO
 import qrcode
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from portal.utils.security import issue_email_otp, verify_email_otp
 
 from django_otp import login as otp_login
 from django_otp.plugins.otp_totp.models import TOTPDevice
@@ -15,7 +17,7 @@ from portal.utils.recovery_codes import (
     replace_user_codes,
     verify_and_consume_code,
 )
-from portal.utils.security import issue_email_otp, verify_email_otp
+
 
 
 @login_required
@@ -216,3 +218,49 @@ def mfa_recovery(request):
         return redirect("portal:mfa_recovery")
 
     return render(request, "portal/mfa_recovery.html")
+
+
+
+
+
+# @login_required
+# def mfa_recovery(request):
+#     """
+#     Use a recovery code instead of TOTP.
+#     """
+#     if request.method == "POST":
+#         code = (request.POST.get("code") or "").strip()
+#         if verify_and_consume_recovery_code(request.user, code):
+#             # Satisfy OTP by attaching a confirmed device if it exists
+#             device = (
+#                 TOTPDevice.objects.filter(user=request.user, confirmed=True)
+#                 .order_by("-id")
+#                 .first()
+#             )
+#             if device:
+#                 otp_login(request, device)
+
+#             audit(request, "MFA_RECOVERY_CODE_USED", target_user=request.user)
+#             messages.success(request, "Recovery code accepted.")
+#             return redirect("portal:dashboard")
+
+#         messages.error(request, "Invalid or already-used recovery code.")
+#         return redirect("portal:mfa_recovery")
+
+#     return render(request, "portal/mfa_recovery.html")
+
+
+@login_required
+def recovery_codes_generate(request):
+    """
+    Generate recovery codes (show plaintext ONCE).
+    Put this in Profile/Settings (not on MFA page).
+    """
+    if request.method == "POST":
+        codes = generate_recovery_codes(10)
+        replace_recovery_codes(request.user, codes)
+        audit(request, "RECOVERY_CODES_GENERATED", target_user=request.user)
+        return render(request, "portal/profile/recovery_codes.html", {"codes": codes})
+
+    return render(request, "portal/profile/recovery_codes.html", {"codes": None})
+

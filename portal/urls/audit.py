@@ -8,6 +8,7 @@ from portal.views_security import RateLimitedPasswordResetView
 from . import views
 from .forms import PortalPasswordResetForm
 from portal import views_security
+from portal.views.audit import audit_log_view
 
 urlpatterns = [
     # We'll move your existing routes here next
