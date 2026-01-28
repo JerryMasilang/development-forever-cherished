@@ -250,17 +250,17 @@ def mfa_recovery(request):
 #     return render(request, "portal/mfa_recovery.html")
 
 
-@login_required
-def recovery_codes_generate(request):
-    """
-    Generate recovery codes (show plaintext ONCE).
-    Put this in Profile/Settings (not on MFA page).
-    """
-    if request.method == "POST":
-        codes = generate_recovery_codes(10)
-        replace_recovery_codes(request.user, codes)
-        audit(request, "RECOVERY_CODES_GENERATED", target_user=request.user)
-        return render(request, "portal/profile/recovery_codes.html", {"codes": codes})
+# @login_required
+# def recovery_codes_generate(request):
+#     """
+#     Generate recovery codes (show plaintext ONCE).
+#     Put this in Profile/Settings (not on MFA page).
+#     """
+#     if request.method == "POST":
+#         codes = generate_recovery_codes(10)
+#         replace_recovery_codes(request.user, codes)
+#         audit(request, "RECOVERY_CODES_GENERATED", target_user=request.user)
+#         return render(request, "portal/profile/recovery_codes.html", {"codes": codes})
 
-    return render(request, "portal/profile/recovery_codes.html", {"codes": None})
+#     return render(request, "portal/profile/recovery_codes.html", {"codes": None})
 

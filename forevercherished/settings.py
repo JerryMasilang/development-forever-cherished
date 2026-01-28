@@ -53,12 +53,12 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "portal.middleware.sessions.SessionActivityMiddleware", 
-    "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "django_otp.middleware.OTPMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "portal.middleware.mfa.EnforceMFAMiddleware",
 ]
+
 
 
 ROOT_URLCONF = "forevercherished.urls"
@@ -124,6 +124,8 @@ TIME_ZONE = "Asia/Manila"
 USE_I18N = True
 
 USE_TZ = True
+
+
 
 
 LOGIN_URL = reverse_lazy("portal:login")

@@ -1,3 +1,4 @@
+# portal/urls/dashboard.py
 from django.urls import path
 from portal.views.dashboard import dashboard
 
