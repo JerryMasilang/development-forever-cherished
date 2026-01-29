@@ -6,12 +6,14 @@ import secrets
 from typing import Iterable, List, Optional
 from django.core.cache import cache
 from django.utils import timezone
-from portal.models import MFARecoveryCode, AuditLog
+
+from portal.models import MFARecoveryCode
+from apps.portal.audit.models import AuditLog
+
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.conf import settings
 import time
-from portal.models import AuditLog
 from django.utils.timezone import now
 from datetime import timedelta
 

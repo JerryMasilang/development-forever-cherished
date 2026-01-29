@@ -39,24 +39,30 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
+
     "django_otp",
     "django_otp.plugins.otp_totp",
     "django_otp.plugins.otp_static",
-    # "portal",
-    "portal.apps.PortalConfig",
-    "apps.portal.portal_core.apps.PortalCoreConfig",
-    "apps.portal.portal_auth.apps.PortalAuthConfig",
-    "apps.portal.portal_mfa.apps.PortalMfaConfig",
-    "apps.portal.portal_qr.apps.PortalQrConfig",
-    "apps.portal.portal_users.apps.PortalUsersConfig",
-    "apps.portal.portal_profiles.apps.PortalProfilesConfig",
-    "apps.portal.portal_audit.apps.PortalAuditConfig",
+
+    "portal.apps.PortalConfig",  # legacy portal (still active)
+
+    # New portal apps
+    "apps.portal.core.apps.CoreConfig",
+    "apps.portal.auth.apps.AuthConfig",
+    "apps.portal.mfa.apps.MfaConfig",
+    "apps.portal.qr.apps.QrConfig",
+    "apps.portal.users.apps.UsersConfig",
+    "apps.portal.profiles.apps.ProfilesConfig",
+    "apps.portal.audit.apps.AuditConfig",
+
+    # Website apps
     "apps.website.site_core.apps.SiteCoreConfig",
     "apps.website.landing.apps.LandingConfig",
     "apps.website.memorials.apps.MemorialsConfig",
     "apps.website.tributes.apps.TributesConfig",
     "apps.website.enroll.apps.EnrollConfig",
 ]
+
 SITE_ID = 1
 
 MIDDLEWARE = [

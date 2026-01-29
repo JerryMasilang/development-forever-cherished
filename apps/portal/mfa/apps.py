@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
-class PortalMfaConfig(AppConfig):
+class MfaConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "apps.portal.portal_mfa"
+    name = "apps.portal.mfa"
     label = "portal_mfa"

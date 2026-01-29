@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from django.conf import settings
 from django.db import models
+# from apps.portal.audit.models import AuditLog
+
 
 
 class UserEventAudit(models.Model):

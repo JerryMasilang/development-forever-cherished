@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
-class PortalCoreConfig(AppConfig):
+class CoreConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "apps.portal.portal_core"
+    name = "apps.portal.core"
     label = "portal_core"
