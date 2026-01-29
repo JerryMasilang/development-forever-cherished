@@ -44,6 +44,18 @@ INSTALLED_APPS = [
     "django_otp.plugins.otp_static",
     # "portal",
     "portal.apps.PortalConfig",
+    "apps.portal.portal_core.apps.PortalCoreConfig",
+    "apps.portal.portal_auth.apps.PortalAuthConfig",
+    "apps.portal.portal_mfa.apps.PortalMfaConfig",
+    "apps.portal.portal_qr.apps.PortalQrConfig",
+    "apps.portal.portal_users.apps.PortalUsersConfig",
+    "apps.portal.portal_profiles.apps.PortalProfilesConfig",
+    "apps.portal.portal_audit.apps.PortalAuditConfig",
+    "apps.website.site_core.apps.SiteCoreConfig",
+    "apps.website.landing.apps.LandingConfig",
+    "apps.website.memorials.apps.MemorialsConfig",
+    "apps.website.tributes.apps.TributesConfig",
+    "apps.website.enroll.apps.EnrollConfig",
 ]
 SITE_ID = 1
 

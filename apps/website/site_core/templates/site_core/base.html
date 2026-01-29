@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Forever Cherished{% endblock %}</title>
+
+  {% load static %}
+
+  <!-- Bootstrap 5 CSS -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    integrity="sha384-ENjdO4Dr2bkBIFxQpeoA6DQD5l9E2Qn1p1rj7Sk3tBtM0V7pG5nY5n0RSJoZ+n"
+    crossorigin="anonymous"
+  >
+
+  <!-- Site overrides -->
+  <link rel="stylesheet" href="{% static 'site_core/css/site.css' %}">
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="/">Forever Cherished</a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+            data-bs-target="#mainNav" aria-controls="mainNav"
+            aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="mainNav">
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link" href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/memorials/">Memorials</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container py-4">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="border-top py-4 mt-5">
+  <div class="container text-center text-muted small">
+    © {% now "Y" %} Forever Cherished
+  </div>
+</footer>
+
+<!-- Bootstrap 5 JS -->
+<script
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+  integrity="sha384-q2JyCGD9Z7q4YfGLwRoTSesFiNUFD6oYBeb5GsyhQOdE31E4n4t4lhPcNI0YvrF"
+  crossorigin="anonymous"
+></script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>
