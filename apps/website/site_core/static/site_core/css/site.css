@@ -1,0 +1,8 @@
+/* Branding tweaks only – let Bootstrap do the heavy lifting */
+.navbar-brand {
+  letter-spacing: 0.5px;
+}
+
+a {
+  text-decoration: none;
+}
