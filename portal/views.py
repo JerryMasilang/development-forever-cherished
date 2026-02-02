@@ -37,6 +37,18 @@ from portal.users.views import (
     user_reset_mfa,
 )
 
+from portal.auth.views import (
+    PortalLoginView,
+    PortalLogoutView,
+    PortalPasswordResetView,
+    PortalPasswordResetDoneView,
+    PortalPasswordResetConfirmView,
+    PortalPasswordResetCompleteView,
+)
+
+
+
+
 
 # -------------------------
 # QR utilities (prototype)

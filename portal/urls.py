@@ -1,10 +1,11 @@
 # portal/urls.py
 from django.contrib.auth import views as auth_views
-from django.urls import path, reverse_lazy
+from django.urls import path, reverse_lazy, include
 from portal.views_security import RateLimitedPasswordResetView
 from . import views
 from .forms import PortalPasswordResetForm
 from portal import views_security
+
 
 
 
@@ -13,14 +14,27 @@ app_name = "portal"
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("dashboard/", views.dashboard, name="dashboard_page"),
-
-    # Auth
+    # Auth aliases (preserve legacy names used by templates)
     path("login/", views.PortalLoginView.as_view(), name="login"),
+    path("logout/", views.PortalLogoutView.as_view(), name="logout"),
+    path("password-reset/", views.PortalPasswordResetView.as_view(), name="password_reset"),
     path(
-        "logout/",
-        auth_views.LogoutView.as_view(next_page=reverse_lazy("portal:login")),
-        name="logout",
+        "password-reset/done/",
+        views.PortalPasswordResetDoneView.as_view(),
+        name="password_reset_done",
     ),
+    path(
+        "password-reset/<uidb64>/<token>/",
+        views.PortalPasswordResetConfirmView.as_view(),
+        name="password_reset_confirm",
+    ),
+    path(
+        "password-reset/complete/",
+        views.PortalPasswordResetCompleteView.as_view(),
+        name="password_reset_complete",
+    ),
+
+    path("auth/", include(("portal.auth.urls", "auth"), namespace="auth")),
 
     # MFA (PRIMARY + VERIFY)
     path("mfa/setup/", views.mfa_setup, name="mfa_setup"),
