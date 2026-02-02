@@ -1,52 +1,55 @@
+# portal/middleware.py
 from django.shortcuts import redirect
 from django.urls import reverse
-from django_otp.plugins.otp_totp.models import TOTPDevice
 
 
-class EnforceMFAMiddleware:
+class PortalMfaGateMiddleware:
     """
-    Forces authenticated users to complete OTP verification
-    before accessing any portal pages.
+    If user is logged in but not MFA-verified, redirect to MFA verify.
+    Supports both:
+    - django-otp verified sessions (TOTP)
+    - Email OTP verified sessions (session flag)
     """
 
-    EXEMPT_PATHS = (
-    "/admin/",
-    "/portal/mfa/",
-    "/portal/login/",
-    "/portal/logout/",
-    "/portal/password-reset/",
-    "/portal/reset/",
-    "/static/",
-    "/media/",
-)
+    SESSION_MFA_VERIFIED = "portal_mfa_verified"
 
+    ALLOW_PATH_PREFIXES = (
+        "/portal/login/",
+        "/portal/logout/",
+        "/portal/mfa/setup/",
+        "/portal/mfa/verify/",
+        "/portal/mfa/recovery/",
+        "/portal/mfa/qr.png",
+        "/portal/password-reset/",
+        "/portal/reset/",
+        "/portal/auth/",  # keep auth module safe
+    )
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        path = request.path
-
-        # Allow exempt paths
-        if any(path.startswith(p) for p in self.EXEMPT_PATHS):
+        # Only gate portal pages
+        if not request.path.startswith("/portal/"):
             return self.get_response(request)
 
-        user = request.user
+        # Always allow these paths (avoid loops)
+        for p in self.ALLOW_PATH_PREFIXES:
+            if request.path.startswith(p):
+                return self.get_response(request)
 
-        if user.is_authenticated:
-            if not user.is_verified():
-                # ✅ Option A: respect user's primary MFA method
-                profile = getattr(user, "profile", None)
-                primary = getattr(profile, "primary_mfa_method", "totp")
+        # If not logged in, allow normal flow
+        if not request.user.is_authenticated:
+            return self.get_response(request)
 
-                # If primary is email, always go to the verify page (email UI)
-                if primary == "email":
-                    return redirect("portal:mfa_verify")
+        # ✅ Verified by django-otp?
+        is_verified = getattr(request.user, "is_verified", None)
+        if callable(is_verified) and request.user.is_verified():
+            return self.get_response(request)
 
-                # Otherwise primary is totp: go verify if device exists, else setup
-                has_device = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
-                if has_device:
-                    return redirect("portal:mfa_verify")
-                return redirect("portal:mfa_setup")
+        # ✅ Verified by EMAIL OTP session flag?
+        if request.session.get(self.SESSION_MFA_VERIFIED):
+            return self.get_response(request)
 
-        return self.get_response(request)
+        # Otherwise force MFA verify
+        return redirect(reverse("portal:mfa_verify"))

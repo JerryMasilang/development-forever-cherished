@@ -37,13 +37,14 @@ urlpatterns = [
 
     path("auth/", include(("portal.auth.urls", "auth"), namespace="auth")),
 
-    # MFA (PRIMARY + VERIFY)
+
+    # MFA
     path("mfa/setup/", views.mfa_setup, name="mfa_setup"),
     path("mfa/verify/", views.mfa_verify, name="mfa_verify"),
+    path("mfa/recovery/", views_security.mfa_recovery, name="mfa_recovery"),  # keep the security version
     path("mfa/qr.png", views.mfa_qr_png, name="mfa_qr_png"),
 
-    # MFA Recovery (SECURITY MODULE ONLY)
-    path("mfa/recovery/", views_security.mfa_recovery, name="mfa_recovery"),
+
 
     # QR
     path("qr/", views.qr_control_center, name="qr_control_center"),
@@ -66,7 +67,6 @@ urlpatterns = [
     # path("profile/", views_security.profile_settings, name="profile"),
     # Profile alias (preserve legacy name used by templates)
     path("profile/", views.profile_settings, name="profile"),
-
     path("profile/", include(("portal.profile.urls", "profile"), namespace="profile")),
 
     path("profile/recovery-codes/", views_security.recovery_codes_generate, name="recovery_codes_generate"),

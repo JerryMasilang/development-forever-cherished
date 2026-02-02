@@ -12,6 +12,12 @@ class PortalLoginView(auth_views.LoginView):
     authentication_form = PortalAuthenticationForm
     redirect_authenticated_user = True
 
+    def form_valid(self, form):
+        # new login session must re-verify MFA
+        self.request.session.pop("portal_mfa_verified", None)
+        return super().form_valid(form)
+
+
 
 class PortalLogoutView(auth_views.LogoutView):
     next_page = reverse_lazy("portal:login")

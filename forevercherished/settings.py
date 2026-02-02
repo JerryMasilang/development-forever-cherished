@@ -53,12 +53,18 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "portal.middleware_sessions.SessionActivityMiddleware", 
+
     "django_otp.middleware.OTPMiddleware",
+    "portal.middleware.PortalMfaGateMiddleware",
+
+    "portal.middleware_sessions.SessionActivityMiddleware",
+
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "portal.middleware.EnforceMFAMiddleware",
 ]
+
+
+
 
 
 ROOT_URLCONF = "forevercherished.urls"
