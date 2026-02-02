@@ -9,6 +9,7 @@ from portal import views_security
 
 
 
+
 app_name = "portal"
 
 urlpatterns = [
@@ -62,7 +63,12 @@ urlpatterns = [
 
 
     # Backward compatible (optional): keep old /profile/ route redirect to /settings/
-    path("profile/", views_security.profile_settings, name="profile"),
+    # path("profile/", views_security.profile_settings, name="profile"),
+    # Profile alias (preserve legacy name used by templates)
+    path("profile/", views.profile_settings, name="profile"),
+
+    path("profile/", include(("portal.profile.urls", "profile"), namespace="profile")),
+
     path("profile/recovery-codes/", views_security.recovery_codes_generate, name="recovery_codes_generate"),
         # Password reset
     path(

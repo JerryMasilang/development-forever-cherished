@@ -47,6 +47,13 @@ from portal.auth.views import (
 )
 
 
+from portal.profile.views import (
+    profile_settings,
+    profile_recovery_codes,
+    profile_stepup_verify,
+    profile_email_change,
+    profile_email_change_error,
+)
 
 
 
