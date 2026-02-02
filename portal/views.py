@@ -1,8 +1,7 @@
 # portal/views.py
 from __future__ import annotations
-
+from portal.dashboard.views import dashboard
 from io import BytesIO
-
 import qrcode
 from django.conf import settings
 from django.contrib import messages
@@ -29,23 +28,6 @@ from .forms import (
 )
 from .models import DistributorApplication  # keep if used elsewhere
 from portal.utils.security import get_notifications_for_user
-
-
-# -------------------------
-# Dashboard
-# -------------------------
-@login_required
-def dashboard(request):
-    kpi = {
-        "available": 0,
-        "reserved": 0,
-        "assigned": 0,
-        "distributed": 0,
-        "registered": 0,
-        "total_generated": 0,
-    }
-    alerts = []
-    return render(request, "portal/dashboard.html", {"kpi": kpi, "alerts": alerts})
 
 
 # -------------------------
