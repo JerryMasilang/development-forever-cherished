@@ -5,7 +5,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 def root_redirect(request):
-    return redirect("portal:dashboard")
+    return redirect("portal:dashboard:dashboard")
 
 
 urlpatterns = [

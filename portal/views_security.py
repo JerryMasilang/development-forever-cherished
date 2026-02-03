@@ -55,7 +55,7 @@ def mfa_recovery(request):
 
             audit(request, "MFA_RECOVERY_CODE_USED", target_user=request.user)
             messages.success(request, "Recovery code accepted.")
-            return redirect("portal:dashboard")
+            return redirect("portal:dashboard:dashboard")
 
         messages.error(request, "Invalid or already-used recovery code.")
         return redirect("portal:mfa_recovery")

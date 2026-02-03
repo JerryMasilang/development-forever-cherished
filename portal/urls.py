@@ -18,7 +18,9 @@ urlpatterns = [
 
     # Optional feature-style auth module routes (kept)
     path("auth/", include(("portal.auth.urls", "auth"), namespace="auth")),
-    path("", include(("portal.dashboard.urls", "dashboard"))),
+    # path("", include(("portal.dashboard.urls", "dashboard"))),
+    path("", include(("portal.dashboard.urls", "dashboard"), namespace="dashboard")),
+
 
 
     # -------------------------

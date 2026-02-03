@@ -25,7 +25,7 @@ def roles_required(*allowed_roles):
             role = getattr(getattr(request.user, "profile", None), "role", None)
             if role not in allowed_roles:
                 messages.error(request, "You are not authorized to access that page.")
-                return redirect(reverse_lazy("portal:dashboard"))
+                return redirect(reverse_lazy("portal:dashboard:dashboard"))
             return view_func(request, *args, **kwargs)
         return _wrapped
     return decorator
