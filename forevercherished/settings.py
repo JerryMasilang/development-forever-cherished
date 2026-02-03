@@ -131,7 +131,7 @@ USE_TZ = True
 
 
 LOGIN_URL = reverse_lazy("portal:login")
-LOGIN_REDIRECT_URL = reverse_lazy("portal:dashboard")
+LOGIN_REDIRECT_URL = reverse_lazy("portal:dashboard:dashboard")
 LOGOUT_REDIRECT_URL = reverse_lazy("portal:login")
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "no-reply@forevercherished.local"

@@ -26,11 +26,11 @@ class UserProfile(models.Model):
         (MFA_EMAIL, "Email OTP"),
     ]
 
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="profile",
-    )
+    # user = models.OneToOneField(
+    #     settings.AUTH_USER_MODEL,
+    #     on_delete=models.CASCADE,
+    #     related_name="profile",
+    # )
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
     email_change_token_jti = models.CharField(max_length=64, blank=True, null=True)

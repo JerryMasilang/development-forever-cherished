@@ -18,8 +18,12 @@ from portal.utils.recovery_codes import verify_and_consume_code
 
 DEVICE_NAME = "default"
 
+
 # Session flag for EMAIL OTP verification (since django-otp verifies only via otp_login/device)
 SESSION_MFA_VERIFIED = "portal_mfa_verified"
+
+DASHBOARD_URL_NAME = "portal:dashboard:dashboard"
+
 
 
 def _get_or_create_totp_device(user) -> TOTPDevice:
@@ -52,7 +56,7 @@ def mfa_setup(request):
             request.session[SESSION_MFA_VERIFIED] = True  # also mark our own flag
 
             messages.success(request, "Authenticator successfully configured.")
-            return redirect("portal:dashboard")
+            return redirect(DASHBOARD_URL_NAME)
 
         messages.error(request, "Invalid verification code.")
 
@@ -75,7 +79,7 @@ def mfa_verify(request):
     otp_verified = getattr(request.user, "is_verified", lambda: False)()
     session_verified = bool(request.session.get(SESSION_MFA_VERIFIED))
     if otp_verified or session_verified:
-        return redirect("portal:dashboard")
+        return redirect(DASHBOARD_URL_NAME)
 
     use = (request.GET.get("use") or "").strip().lower()
 
@@ -120,7 +124,7 @@ def mfa_verify(request):
                 # Mark this session as verified (middleware will respect this)
                 request.session[SESSION_MFA_VERIFIED] = True
 
-                return redirect("portal:dashboard")
+                return redirect(DASHBOARD_URL_NAME)
 
             messages.error(request, "Invalid or expired email code.")
             return redirect(reverse("portal:mfa_verify") + "?use=email")
@@ -141,7 +145,7 @@ def mfa_verify(request):
                 profile.save(update_fields=["last_mfa_verified_at"])
 
                 request.session[SESSION_MFA_VERIFIED] = True
-                return redirect("portal:dashboard")
+                return redirect(DASHBOARD_URL_NAME)
 
             messages.error(request, "Invalid authenticator code.")
             return redirect(reverse("portal:mfa_verify") + "?use=totp")
@@ -174,7 +178,7 @@ def mfa_recovery(request):
             request.session[SESSION_MFA_VERIFIED] = True
 
             messages.success(request, "Recovery code accepted.")
-            return redirect("portal:dashboard")
+            return redirect(DASHBOARD_URL_NAME)
 
         messages.error(request, "Invalid or already used recovery code.")
 
