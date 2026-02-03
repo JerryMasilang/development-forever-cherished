@@ -50,19 +50,19 @@ def get_client_ip(request) -> str:
     return request.META.get("REMOTE_ADDR", "") or ""
 
 
-# def audit(request, action: str, target_user=None, reason: str = "") -> None:
-#     try:
-#         AuditLog.objects.create(
-#             actor=getattr(request, "user", None) if getattr(request, "user", None) and request.user.is_authenticated else None,
-#             action=action,
-#             target_user=target_user,
-#             reason=reason or "",
-#             ip_address=get_client_ip(request),
-#             user_agent=request.META.get("HTTP_USER_AGENT", "") or "",
-#         )
-#     except Exception:
-#         # Never block the user flow because of logging errors
-#         pass
+def audit(request, action: str, target_user=None, reason: str = "") -> None:
+    try:
+        AuditLog.objects.create(
+            actor=getattr(request, "user", None) if getattr(request, "user", None) and request.user.is_authenticated else None,
+            action=action,
+            target_user=target_user,
+            reason=reason or "",
+            ip_address=get_client_ip(request),
+            user_agent=request.META.get("HTTP_USER_AGENT", "") or "",
+        )
+    except Exception:
+        # Never block the user flow because of logging errors
+        pass
 
 
 # -------- Password reset rate limiting (Task 3 uses these) --------
@@ -205,9 +205,6 @@ def audit(request, action: str, target_user=None, reason: str = "", meta=None):
     except Exception:
         # never block the request due to logging failures
         pass
-
-# Backward-compatible alias (in case something referenced old name/behavior)
-audit_log = audit
     
 
 NOTIFICATION_ACTIONS = {

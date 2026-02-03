@@ -194,3 +194,26 @@ def mfa_qr_png(request):
     img.save(buffer, format="PNG")
     buffer.seek(0)
     return HttpResponse(buffer.getvalue(), content_type="image/png")
+
+
+# @login_required
+# def mfa_recovery(request):
+#     """
+#     Use a recovery code instead of TOTP.
+#     """
+#     if request.method == "POST":
+#         code = (request.POST.get("code") or "").strip()
+#         if verify_and_consume_recovery_code(request.user, code):
+#             # Satisfy OTP by attaching a confirmed device if it exists
+#             device = TOTPDevice.objects.filter(user=request.user, confirmed=True).order_by("-id").first()
+#             if device:
+#                 otp_login(request, device)
+
+#             audit(request, "MFA_RECOVERY_CODE_USED", target_user=request.user)
+#             messages.success(request, "Recovery code accepted.")
+#             return redirect("portal:dashboard:dashboard")
+
+#         messages.error(request, "Invalid or already-used recovery code.")
+#         return redirect("portal:mfa_recovery")
+
+#     return render(request, "portal/mfa_recovery.html")

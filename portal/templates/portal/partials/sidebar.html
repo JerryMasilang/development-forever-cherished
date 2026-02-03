@@ -38,7 +38,7 @@
   {% if request.user.is_superuser or request.user.profile.role == "Administrator" %}
   <a
     class="list-group-item list-group-item-action py-3"
-    href="{% url 'portal:user_list' %}"
+    href="{% url 'portal:users:user_list' %}"
   >
     <i class="bi bi-people me-2"></i>User Management
   </a>

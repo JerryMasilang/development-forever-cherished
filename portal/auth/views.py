@@ -1,6 +1,13 @@
 from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
 
+from django.contrib import messages
+from django.shortcuts import redirect, render
+
+from portal.forms import DistributorApplicationForm
+
+
+
 from portal.forms import (
     PortalAuthenticationForm,
     PortalPasswordResetForm,
@@ -42,3 +49,22 @@ class PortalPasswordResetConfirmView(auth_views.PasswordResetConfirmView):
 
 class PortalPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
     template_name = "portal/auth/password_reset_complete.html"
+
+
+
+
+# -------------------------
+# Distributor application
+# -------------------------
+def distributor_apply(request):
+    if request.method == "POST":
+        form = DistributorApplicationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Application submitted. We will contact you once reviewed.")
+            return redirect("portal:login")
+    else:
+        form = DistributorApplicationForm()
+
+    return render(request, "portal/auth/distributor_apply.html", {"form": form})
+

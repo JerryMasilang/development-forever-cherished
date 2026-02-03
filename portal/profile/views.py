@@ -5,6 +5,10 @@ from django.contrib import messages
 from portal.models import UserProfile
 from .services import regenerate_recovery_codes
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from portal.models import MFARecoveryCode
+
 
 @login_required
 def profile_settings(request):
@@ -27,18 +31,28 @@ def profile_settings(request):
     )
 
 
+# @login_required
+# def profile_recovery_codes(request):
+#     codes = (
+#         request.user.mfarecoverycode_set
+#         .filter(is_used=False)
+#         .order_by("created_at")
+#     )
+#     return render(
+#         request,
+#         "portal/profile/recovery_codes.html",
+#         {"codes": codes},
+#     )
 @login_required
 def profile_recovery_codes(request):
+    # Do NOT rely on request.user.<reverse_manager> because related_name may differ
     codes = (
-        request.user.mfarecoverycode_set
-        .filter(is_used=False)
-        .order_by("created_at")
+        MFARecoveryCode.objects
+        .filter(user=request.user, used_at__isnull=True)
+        .order_by("id")
     )
-    return render(
-        request,
-        "portal/profile/recovery_codes.html",
-        {"codes": codes},
-    )
+    return render(request, "portal/profile/recovery_codes.html", {"codes": codes})
+
 
 @login_required
 def profile_stepup_verify(request):
