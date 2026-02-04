@@ -1,8 +1,7 @@
 # portal/qr/views.py
 from __future__ import annotations
 
-# ✅ COPY your exact imports used by the QR functions from views_legacy.py
-# Example imports below — replace with your actual ones:
+# QR module imports live here (legacy views_legacy.py removed)
 from io import BytesIO
 import qrcode
 
