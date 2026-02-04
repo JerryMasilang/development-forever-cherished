@@ -2,15 +2,13 @@
 from __future__ import annotations
 from django.contrib.auth.views import PasswordResetView
 from django.urls import reverse_lazy
-from portal.utils.security import rate_limit_hit, get_client_ip, audit
+from portal.utils.security import rate_limit_hit, get_client_ip
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.http import HttpResponseRedirect
 from django_otp import login as otp_login
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from portal.forms import ProfileSettingsForm, PortalPasswordChangeForm
-from portal.utils.security import audit
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -25,15 +23,18 @@ from django.contrib.auth import get_user_model
 from portal.utils.security import step_up_is_verified
 from urllib.parse import unquote
 from portal.audit.views import audit_log_view
-
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.shortcuts import redirect, render
 from django.utils import timezone
 from django_otp import login as otp_login
 from django_otp.plugins.otp_totp.models import TOTPDevice
-
 from portal.utils.security import audit, verify_and_consume_recovery_code
+from django.contrib.auth.decorators import login_required
+from portal.utils.security import generate_recovery_codes, replace_recovery_codes, audit
+
+
+from portal.utils.security import (
+    generate_recovery_codes,
+    replace_recovery_codes,
+)
 
 
 
@@ -558,6 +559,11 @@ def request_email_change(request):
 
 @login_required
 def confirm_email_change(request, token):
+    signer = TimestampSigner()
+    payload = signer.unsign(token, max_age=60 * 30)
+    jti, new_email = payload.split("|", 1)
+    new_email = new_email.strip().lower()
+
     profile = request.user.profile
 
     if not profile.email_change_token or str(profile.email_change_token) != token:
@@ -599,4 +605,16 @@ def confirm_email_change(request, token):
     messages.success(request, "Your email address has been updated.")
     return redirect("portal:settings")
 
+
+
+
+@login_required
+def recovery_codes_generate(request):
+    if request.method == "POST":
+        codes = generate_recovery_codes(10)
+        replace_recovery_codes(request.user, codes)
+        audit(request, "RECOVERY_CODES_GENERATED", target_user=request.user)
+        return render(request, "portal/profile/recovery_codes.html", {"codes": codes})
+
+    return render(request, "portal/profile/recovery_codes.html", {"codes": None})
 

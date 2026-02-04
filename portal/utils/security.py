@@ -1,19 +1,33 @@
 # portal/utils/security.py
+# from __future__ import annotations
+
+# import hashlib
+# import secrets
+# from typing import Iterable, List, Optional
+# from django.core.cache import cache
+# from django.utils import timezone
+# from portal.models import MFARecoveryCode, AuditLog
+# from django.core.mail import send_mail
+# from django.conf import settings
+# import time
+# from django.utils.timezone import now
+# from datetime import timedelta
 from __future__ import annotations
 
 import hashlib
 import secrets
-from typing import Iterable, List, Optional
-from django.core.cache import cache
-from django.utils import timezone
-from portal.models import MFARecoveryCode, AuditLog
+import time
+from datetime import timedelta
+from typing import Iterable, List
+
+from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import send_mail
-from django.conf import settings
-import time
-from portal.models import AuditLog
-from django.utils.timezone import now
-from datetime import timedelta
+from django.utils import timezone
+
+from portal.models import MFARecoveryCode, AuditLog
+
+
 
 
 def sha256_hex(value: str) -> str:
@@ -50,19 +64,6 @@ def get_client_ip(request) -> str:
     return request.META.get("REMOTE_ADDR", "") or ""
 
 
-def audit(request, action: str, target_user=None, reason: str = "") -> None:
-    try:
-        AuditLog.objects.create(
-            actor=getattr(request, "user", None) if getattr(request, "user", None) and request.user.is_authenticated else None,
-            action=action,
-            target_user=target_user,
-            reason=reason or "",
-            ip_address=get_client_ip(request),
-            user_agent=request.META.get("HTTP_USER_AGENT", "") or "",
-        )
-    except Exception:
-        # Never block the user flow because of logging errors
-        pass
 
 
 # -------- Password reset rate limiting (Task 3 uses these) --------

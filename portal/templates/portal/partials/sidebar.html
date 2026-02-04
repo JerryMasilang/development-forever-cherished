@@ -28,7 +28,7 @@
   {% if request.user.is_authenticated and request.user.profile.role in "Administrator Manager" %}
   <a
     class="list-group-item list-group-item-action py-3"
-    href="{% url 'portal:audit_log' %}"
+    href="{% url 'portal:audit:list' %}"
   >
     <i class="bi bi-journal-text me-2"></i>Audit Logs
   </a>

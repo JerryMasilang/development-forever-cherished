@@ -14,7 +14,9 @@ from django_otp import login as otp_login
 
 from portal.models import UserProfile
 from portal.utils.security import issue_email_otp, verify_email_otp
-from portal.utils.recovery_codes import verify_and_consume_code
+# from portal.utils.recovery_codes import verify_and_consume_code
+from portal.utils.security import verify_and_consume_recovery_code, audit
+
 
 DEVICE_NAME = "default"
 
@@ -161,14 +163,14 @@ def mfa_verify(request):
         },
     )
 
-
 @login_required
 def mfa_recovery(request):
     device = _get_confirmed_totp_device(request.user)
 
     if request.method == "POST":
         code = (request.POST.get("code") or "").strip()
-        if verify_and_consume_code(request.user, code):
+
+        if verify_and_consume_recovery_code(request.user, code):
             if device:
                 otp_login(request, device)
 
@@ -177,9 +179,11 @@ def mfa_recovery(request):
 
             request.session[SESSION_MFA_VERIFIED] = True
 
+            audit(request, "MFA_RECOVERY_CODE_USED", target_user=request.user)
             messages.success(request, "Recovery code accepted.")
             return redirect(DASHBOARD_URL_NAME)
 
+        audit(request, "MFA_RECOVERY_CODE_FAILED", target_user=request.user)
         messages.error(request, "Invalid or already used recovery code.")
 
     return render(request, "portal/mfa_recovery.html")
@@ -195,25 +199,3 @@ def mfa_qr_png(request):
     buffer.seek(0)
     return HttpResponse(buffer.getvalue(), content_type="image/png")
 
-
-# @login_required
-# def mfa_recovery(request):
-#     """
-#     Use a recovery code instead of TOTP.
-#     """
-#     if request.method == "POST":
-#         code = (request.POST.get("code") or "").strip()
-#         if verify_and_consume_recovery_code(request.user, code):
-#             # Satisfy OTP by attaching a confirmed device if it exists
-#             device = TOTPDevice.objects.filter(user=request.user, confirmed=True).order_by("-id").first()
-#             if device:
-#                 otp_login(request, device)
-
-#             audit(request, "MFA_RECOVERY_CODE_USED", target_user=request.user)
-#             messages.success(request, "Recovery code accepted.")
-#             return redirect("portal:dashboard:dashboard")
-
-#         messages.error(request, "Invalid or already-used recovery code.")
-#         return redirect("portal:mfa_recovery")
-
-#     return render(request, "portal/mfa_recovery.html")

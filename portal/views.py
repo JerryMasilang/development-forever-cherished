@@ -51,5 +51,5 @@ from portal.qr.views import (
     qr_png,
 )
 
-from portal.auth.views import distributor_apply
+from portal.distributor.views import distributor_apply
 

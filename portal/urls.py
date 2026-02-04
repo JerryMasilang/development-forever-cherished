@@ -1,11 +1,15 @@
 # portal/urls.py
 from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy, include
-
+from portal.audit.views import audit_log_view  # re-add ONLY if you use alias
 from . import views
 from .forms import PortalPasswordResetForm
 from portal import views_security
 from portal.views_security import RateLimitedPasswordResetView
+from portal.mfa.views_security import mfa_recovery
+from portal.distributor.views import distributor_apply  # import once
+
+
 
 app_name = "portal"
 
@@ -43,7 +47,8 @@ urlpatterns = [
     path("mfa/verify/", views.mfa_verify, name="mfa_verify"),
     path("mfa/qr.png", views.mfa_qr_png, name="mfa_qr_png"),
     # IMPORTANT: recovery stays in views_security (approved)
-    path("mfa/recovery/", views_security.mfa_recovery, name="mfa_recovery"),
+    # path("mfa/recovery/", views_security.mfa_recovery, name="mfa_recovery"),
+    path("mfa/recovery/", mfa_recovery, name="mfa_recovery"),
 
     # -------------------------
     # Password Reset (SINGLE SET - rate-limited version)
@@ -85,34 +90,41 @@ urlpatterns = [
     # -------------------------
     # QR (still legacy-routed here for now)
     # -------------------------
+    # Legacy aliases (keep old reverse names working)
+    path("qr/", include(("portal.qr.urls", "qr"), namespace="qr")),
     path("qr/", views.qr_control_center, name="qr_control_center"),
     path("qr/png/<str:qr_id>/", views.qr_png, name="qr_png"),
+
 
     # -------------------------
     # Profile / Settings
     # -------------------------
-    # Security-driven settings stay in views_security (current working behavior)
     path("settings/", views_security.profile_settings, name="settings"),
     path("settings/recovery-codes/", views_security.recovery_codes_generate, name="recovery_codes_generate"),
     path("settings/verify/", views_security.stepup_verify, name="stepup_verify"),
     path("settings/email/change/", views_security.request_email_change, name="request_email_change"),
     path("settings/email/confirm/<uuid:token>/", views_security.confirm_email_change, name="confirm_email_change"),
 
-    # Legacy alias (if templates still reference portal:profile)
-    path("profile/", views.profile_settings, name="profile"),
-
-    # Feature-style profile module routes (kept)
+    # Feature-style profile module routes
     path("profile/", include(("portal.profile.urls", "profile"), namespace="profile")),
 
-    # -------------------------
-    # Audit + email change flow pages
-    # -------------------------
-    path("audit/", views_security.audit_log_view, name="audit_log"),
+    # Optional legacy alias if templates still use portal:profile
+    path("profile-legacy/", views.profile_settings, name="profile"),
+ 
+     # Email change flow pages
     path("email/change/verify/", views_security.email_change_verify, name="email_change_verify"),
     path("email/change/confirm/", views_security.email_change_confirm, name="email_change_confirm"),
 
-    # -------------------------
+    # Audit feature module
+    path("audit/", include(("portal.audit.urls", "audit"), namespace="audit")),
+
     # Distributor
-    # -------------------------
-    path("apply/distributor/", views.distributor_apply, name="distributor_apply"),
+    # path("apply/distributor/", views.distributor_apply, name="distributor_apply"),
+    path("apply/", include(("portal.distributor.urls", "distributor"), namespace="distributor")),
+    path("apply/distributor/", distributor_apply, name="distributor_apply"),
+
+    # Legacy alias (people typed this before)
+    # path("qr/apply/distributor/", distributor_apply, name="qr_distributor_apply_legacy"),
+
+
 ]
