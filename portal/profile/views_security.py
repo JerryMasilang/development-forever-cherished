@@ -29,76 +29,15 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 from portal.utils.security import audit, verify_and_consume_recovery_code
 from django.contrib.auth.decorators import login_required
 from portal.utils.security import generate_recovery_codes, replace_recovery_codes, audit
-
-
+from portal.models import UserSession
+from django.contrib.sessions.models import Session
 from portal.utils.security import (
     generate_recovery_codes,
     replace_recovery_codes,
 )
 
-
-
-def _get_user_sessions(user, current_session_key: str | None):
-    """
-    Return list of sessions for this user (active, non-expired).
-    """
-    now = timezone.now()
-    sessions = []
-
-    for s in Session.objects.filter(expire_date__gte=now):
-        data = s.get_decoded()
-        if str(data.get("_auth_user_id")) != str(user.pk):
-            continue
-
-        sessions.append({
-            "session_key": s.session_key,
-            "is_current": (s.session_key == current_session_key),
-            "expire_date": s.expire_date,
-            "last_seen": data.get("last_seen", ""),
-            "ip": data.get("ip", ""),
-            "ua": data.get("ua", ""),
-        })
-
-    # Sort: current first, then by last_seen desc-ish
-    def sort_key(x):
-        return (0 if x["is_current"] else 1, x["last_seen"] or "")
-    sessions.sort(key=sort_key)
-
-    return sessions
-
-
-def _terminate_session(session_key: str):
-    Session.objects.filter(session_key=session_key).delete()
-
-
-
-
-def _get_user_sessions(user, current_session_key: str | None):
-    now = timezone.now()
-    sessions = []
-    for s in Session.objects.filter(expire_date__gte=now):
-        data = s.get_decoded()
-        if str(data.get("_auth_user_id")) != str(user.pk):
-            continue
-        sessions.append({
-            "session_key": s.session_key,
-            "is_current": (s.session_key == current_session_key),
-            "expire_date": s.expire_date,
-            "last_seen": data.get("last_seen", ""),
-            "ip": data.get("ip", ""),
-            "ua": data.get("ua", ""),
-        })
-
-    def sort_key(x):
-        return (0 if x["is_current"] else 1, x["last_seen"] or "")
-    sessions.sort(key=sort_key)
-    return sessions
-
-
-def _terminate_session(session_key: str):
-    Session.objects.filter(session_key=session_key).delete()
-
-
+from portal.models import UserSession
+from django.contrib.sessions.models import Session
 
 
 @login_required
@@ -107,6 +46,27 @@ def profile_settings(request):
 
     # ✅ ALWAYS compute active_tab (default to profile)
     active_tab = (request.GET.get("tab") or "profile").strip().lower()
+
+    # Ensure session key exists
+    if not request.session.session_key:
+        request.session.save()
+    
+    request.session["__touch"] = True
+
+
+    # Upsert the CURRENT session so the table isn't empty on first load
+    sk = request.session.session_key
+    if sk:
+        UserSession.objects.update_or_create(
+            session_key=sk,
+            defaults={
+                "user": request.user,
+                "ip_address": get_client_ip(request) or "",
+                "user_agent": (request.META.get("HTTP_USER_AGENT") or "")[:255],
+                "last_seen_at": timezone.now(),
+                "ended_at": None,
+            },
+        )
 
     if request.method == "POST":
         action = (request.POST.get("action") or "").strip()
@@ -190,12 +150,18 @@ def profile_settings(request):
 
         elif action == "terminate_other_sessions":
             current = request.session.session_key
-            for s in _get_user_sessions(request.user, current):
+            sessions = _get_user_sessions(request.user, current)
+
+            killed = 0
+            for s in sessions:
                 if not s["is_current"]:
                     _terminate_session(s["session_key"])
-            audit(request, "OTHER_SESSIONS_TERMINATED", target_user=request.user)
-            messages.success(request, "Other sessions terminated.")
+                    killed += 1
+
+            audit(request, "OTHER_SESSIONS_TERMINATED", target_user=request.user, meta={"count": killed})
+            messages.success(request, f"Other sessions terminated ({killed}).")
             return redirect(str(reverse_lazy("portal:settings")) + "?tab=security")
+
 
         # =========================
         # Email change (step-up -> verify new email)
@@ -618,3 +584,63 @@ def recovery_codes_generate(request):
 
     return render(request, "portal/profile/recovery_codes.html", {"codes": None})
 
+
+# def _get_user_sessions(user, current_session_key: str | None):
+#     now = timezone.now()
+
+#     qs = UserSession.objects.filter(user=user, ended_at__isnull=True).order_by("-last_seen_at")
+#     keys = [x.session_key for x in qs]
+#     if not keys:
+#         return []
+
+#     live_keys = set(
+#         Session.objects.filter(session_key__in=keys, expire_date__gte=now)
+#         .values_list("session_key", flat=True)
+#     )
+
+#     sessions = []
+#     for s in qs:
+#         if s.session_key not in live_keys:
+#             # auto mark ended
+#             UserSession.objects.filter(pk=s.pk, ended_at__isnull=True).update(ended_at=now)
+#             continue
+
+#         sessions.append({
+#             "session_key": s.session_key,
+#             "is_current": (s.session_key == current_session_key),
+#             "last_seen": s.last_seen_at,
+#             "ip": s.ip_address,
+#             "ua": s.user_agent,
+#         })
+
+#     # current first, then most recent
+#     sessions.sort(key=lambda x: (0 if x["is_current"] else 1, -(x["last_seen"].timestamp() if x["last_seen"] else 0)))
+#     return sessions
+def _get_user_sessions(user, current_session_key: str | None):
+    qs = (
+        UserSession.objects
+        .filter(user=user, ended_at__isnull=True)
+        .order_by("-last_seen_at")
+    )
+
+    sessions = [{
+        "session_key": s.session_key,
+        "is_current": (s.session_key == current_session_key),
+        "last_seen": s.last_seen_at,
+        "ip": s.ip_address,
+        "ua": s.user_agent,
+    } for s in qs]
+
+    sessions.sort(
+        key=lambda x: (
+            0 if x["is_current"] else 1,
+            -(x["last_seen"].timestamp() if x["last_seen"] else 0),
+        )
+    )
+    return sessions
+
+
+
+def _terminate_session(session_key: str):
+    Session.objects.filter(session_key=session_key).delete()
+    UserSession.objects.filter(session_key=session_key, ended_at__isnull=True).update(ended_at=timezone.now())

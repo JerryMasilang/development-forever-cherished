@@ -151,6 +151,9 @@ MEDIA_ROOT = BASE_DIR / "media"
 STEP_UP_TTL_SECONDS = 300  # 5 minutes
 EMAIL_OTP_TTL_SECONDS = 300
 
+PUBLIC_SITE_BASE_URL = "http://127.0.0.1:8000"
+# later in prod: "https://forevercherished.com"
+
 
 AUTHENTICATION_BACKENDS = [
     "portal.auth_backends.EmailOrUsernameBackend",

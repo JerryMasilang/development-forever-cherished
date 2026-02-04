@@ -1,14 +1,24 @@
+# from django.contrib.auth.decorators import login_required
+# from django.shortcuts import render, redirect
+# from django.contrib import messages
+
+# from portal.models import UserProfile
+# from .services import regenerate_recovery_codes
+
+# from django.contrib.auth.decorators import login_required
+# from django.shortcuts import render
+# from portal.models import MFARecoveryCode
+
+# from django.views.decorators.http import require_POST
+
+
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-from django.contrib import messages
+from django.views.decorators.http import require_POST
 
-from portal.models import UserProfile
-from .services import regenerate_recovery_codes
-
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
 from portal.models import MFARecoveryCode
-
+from .services import regenerate_recovery_codes
 
 @login_required
 def profile_settings(request):
@@ -20,7 +30,7 @@ def profile_settings(request):
         # Regenerate recovery codes
         if action == "recovery_codes":
             regenerate_recovery_codes(request, request.user)
-            return redirect("portal:profile")
+            return redirect("portal:settings")
 
     return render(
         request,
@@ -31,18 +41,6 @@ def profile_settings(request):
     )
 
 
-# @login_required
-# def profile_recovery_codes(request):
-#     codes = (
-#         request.user.mfarecoverycode_set
-#         .filter(is_used=False)
-#         .order_by("created_at")
-#     )
-#     return render(
-#         request,
-#         "portal/profile/recovery_codes.html",
-#         {"codes": codes},
-#     )
 @login_required
 def profile_recovery_codes(request):
     # Do NOT rely on request.user.<reverse_manager> because related_name may differ
@@ -62,14 +60,6 @@ def profile_stepup_verify(request):
     )
 
 
-# @login_required
-# @stepup_required
-# def profile_stepup_verify(request):
-#     return render(
-#         request,
-#         "portal/profile/stepup_verify.html"
-#     )
-
 
 @login_required
 def profile_email_change(request):
@@ -85,3 +75,22 @@ def profile_email_change_error(request):
         request,
         "portal/profile/email_change_error.html"
     )
+
+
+
+@login_required
+@require_POST
+def set_theme(request):
+    theme = (request.POST.get("theme_preference") or "system").strip()
+    if theme not in ("system", "light", "dark"):
+        theme = "system"
+
+    prof = request.user.profile
+    prof.theme_preference = theme
+    prof.save(update_fields=["theme_preference"])
+
+    # Optional: audit log event if you want consistency
+    # audit(request, "PREFERENCE_THEME_UPDATED", meta={"theme": theme})
+
+    messages.success(request, "Theme updated.")
+    return redirect("portal:settings")  # or wherever your profile settings URL name points

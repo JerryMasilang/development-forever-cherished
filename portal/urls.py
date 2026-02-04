@@ -8,6 +8,10 @@ from portal import views_security
 from portal.views_security import RateLimitedPasswordResetView
 from portal.mfa.views_security import mfa_recovery
 from portal.distributor.views import distributor_apply  # import once
+from . import views
+from portal.profile.views import set_theme
+
+
 
 
 
@@ -99,21 +103,16 @@ urlpatterns = [
     # -------------------------
     # Profile / Settings
     # -------------------------
+# -------------------------
+# Profile / Settings
+# -------------------------
     path("settings/", views_security.profile_settings, name="settings"),
     path("settings/recovery-codes/", views_security.recovery_codes_generate, name="recovery_codes_generate"),
     path("settings/verify/", views_security.stepup_verify, name="stepup_verify"),
-    path("settings/email/change/", views_security.request_email_change, name="request_email_change"),
-    path("settings/email/confirm/<uuid:token>/", views_security.confirm_email_change, name="confirm_email_change"),
 
-    # Feature-style profile module routes
-    path("profile/", include(("portal.profile.urls", "profile"), namespace="profile")),
-
-    # Optional legacy alias if templates still use portal:profile
-    path("profile-legacy/", views.profile_settings, name="profile"),
- 
-     # Email change flow pages
-    path("email/change/verify/", views_security.email_change_verify, name="email_change_verify"),
-    path("email/change/confirm/", views_security.email_change_confirm, name="email_change_confirm"),
+    # Email change (querystring-based, approved flow)
+    path("settings/email/verify/", views_security.email_change_verify, name="email_change_verify"),
+    path("settings/email/confirm/", views_security.email_change_confirm, name="email_change_confirm"),
 
     # Audit feature module
     path("audit/", include(("portal.audit.urls", "audit"), namespace="audit")),
@@ -122,9 +121,8 @@ urlpatterns = [
     # path("apply/distributor/", views.distributor_apply, name="distributor_apply"),
     path("apply/", include(("portal.distributor.urls", "distributor"), namespace="distributor")),
     path("apply/distributor/", distributor_apply, name="distributor_apply"),
+    path("settings/theme/", set_theme, name="set_theme"),
 
-    # Legacy alias (people typed this before)
-    # path("qr/apply/distributor/", distributor_apply, name="qr_distributor_apply_legacy"),
-
+    # path("theme/", views.set_theme, name="set_theme"),
 
 ]

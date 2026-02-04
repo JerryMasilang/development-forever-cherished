@@ -26,12 +26,6 @@ class UserProfile(models.Model):
         (MFA_EMAIL, "Email OTP"),
     ]
 
-    # user = models.OneToOneField(
-    #     settings.AUTH_USER_MODEL,
-    #     on_delete=models.CASCADE,
-    #     related_name="profile",
-    # )
-
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
     email_change_token_jti = models.CharField(max_length=64, blank=True, null=True)
     email_change_token_used_at = models.DateTimeField(blank=True, null=True)
@@ -63,6 +57,27 @@ class UserProfile(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # in UserProfile model
+    THEME_SYSTEM = "system"
+    THEME_LIGHT = "light"
+    THEME_DARK = "dark"
+    THEME_CHOICES = [
+        (THEME_SYSTEM, "System"),
+        (THEME_LIGHT, "Light"),
+        (THEME_DARK, "Dark"),
+    ]
+
+    theme_preference = models.CharField(
+        max_length=10,
+        choices=THEME_CHOICES,
+        default=THEME_SYSTEM,
+    )
+
+
+    @property
+    def is_admin_or_manager(self) -> bool:
+        return self.role in (self.ROLE_ADMIN, self.ROLE_MANAGER)
+
 
     @property
     def public_id(self) -> str:
@@ -116,8 +131,6 @@ class UserSession(models.Model):
             models.Index(fields=["user", "ended_at"]),
             models.Index(fields=["session_key"]),
         ]
-
-
 
 class UserEventAudit(models.Model):
     ACTION_CREATE = "CREATE"

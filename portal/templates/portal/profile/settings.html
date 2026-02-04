@@ -86,6 +86,13 @@
                       {% endif %}
                     </div>
 
+                    <div class="col-12 col-md-6">
+                      <label class="form-label">Portal ID</label>
+                      <input class="form-control" value="{{ profile.public_id|default:'(not issued yet)' }}" disabled>
+                      <div class="form-text">Your permanent ID in the QR Portal.</div>
+                    </div>
+
+
                     <div class="w-100">
                       {{ form.avatar }}
                       <div class="form-text">Optional. Large photos will be resized automatically.</div>
@@ -126,6 +133,28 @@
             </div>
           </div>
         </div>
+
+
+        <div class="card mb-3">
+          <div class="card-header fw-semibold">Personal Preferences</div>
+          <div class="card-body">
+            <form method="post" action="{% url 'portal:set_theme' %}">
+              {% csrf_token %}
+              <label class="form-label">Theme</label>
+
+              {% with cur=request.user.profile.theme_preference|default:"system" %}
+              <select name="theme_preference" class="form-select" onchange="this.form.submit()">
+                <option value="system" {% if cur == "system" %}selected{% endif %}>System</option>
+                <option value="light"  {% if cur == "light" %}selected{% endif %}>Light</option>
+                <option value="dark"   {% if cur == "dark" %}selected{% endif %}>Dark</option>
+              </select>
+              {% endwith %}
+
+              <div class="form-text">System follows your device appearance setting.</div>
+            </form>
+          </div>
+        </div>
+
 
         <!-- SECURITY TAB -->
         <div class="tab-pane fade {% if active_tab == 'security' %}show active{% endif %}"

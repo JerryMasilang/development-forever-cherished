@@ -6,7 +6,10 @@ from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from .models import UserProfile, PasswordHistory
-
+from django.contrib.auth.signals import user_logged_out
+from django.dispatch import receiver
+from django.utils import timezone
+from portal.models import UserSession
 User = get_user_model()
 
 ROLE_PREFIX_MAP = {
@@ -79,3 +82,21 @@ def password_change_email_alert(sender, instance: User, **kwargs):
             [instance.email],
             fail_silently=True,
         )
+
+
+
+
+@receiver(user_logged_out)
+def mark_session_ended_on_logout(sender, request, user, **kwargs):
+    if not request or not user:
+        return
+
+    session_key = getattr(request.session, "session_key", None)
+    if not session_key:
+        return
+
+    UserSession.objects.filter(
+        user=user,
+        session_key=session_key,
+        ended_at__isnull=True
+    ).update(ended_at=timezone.now())

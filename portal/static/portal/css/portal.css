@@ -36,3 +36,147 @@
 .auth-userbar__logout:hover {
   background: #f1f3f5;
 }
+
+/* =========================
+   FORCE DARK THEME OVERRIDES
+   ========================= */
+
+html.theme-dark body,
+html.theme-dark .container-fluid,
+html.theme-dark main {
+  background-color: #0f1216 !important;
+  color: #e6e6e6 !important;
+}
+
+/* Kill Bootstrap utility light backgrounds */
+html.theme-dark .bg-light,
+html.theme-dark .bg-white,
+html.theme-dark .navbar,
+html.theme-dark .offcanvas,
+html.theme-dark .offcanvas-body,
+html.theme-dark .offcanvas-header {
+  background-color: #161b22 !important;
+  color: #e6e6e6 !important;
+}
+
+/* Borders */
+html.theme-dark .border,
+html.theme-dark .border-top,
+html.theme-dark .border-end,
+html.theme-dark .border-bottom,
+html.theme-dark .border-start {
+  border-color: #2b313a !important;
+}
+
+/* Cards / list groups */
+html.theme-dark .card,
+html.theme-dark .list-group-item {
+  background-color: #161b22 !important;
+  color: #e6e6e6 !important;
+  border-color: #2b313a !important;
+}
+
+/* Tables */
+html.theme-dark .table {
+  color: #e6e6e6 !important;
+}
+html.theme-dark .table > :not(caption) > * > * {
+  background-color: #161b22 !important;
+  color: #e6e6e6 !important;
+  border-color: #2b313a !important;
+}
+
+/* Inputs */
+html.theme-dark .form-control,
+html.theme-dark .form-select,
+html.theme-dark textarea,
+html.theme-dark input {
+  background-color: #0f1216 !important;
+  color: #e6e6e6 !important;
+  border-color: #2b313a !important;
+}
+html.theme-dark .form-control::placeholder {
+  color: #9aa4af !important;
+}
+
+/* Dropdowns */
+html.theme-dark .dropdown-menu {
+  background-color: #161b22 !important;
+  color: #e6e6e6 !important;
+  border-color: #2b313a !important;
+}
+html.theme-dark .dropdown-item {
+  color: #e6e6e6 !important;
+}
+html.theme-dark .dropdown-item:hover {
+  background-color: #1f2630 !important;
+}
+
+
+
+/* =========================
+   DARK MODE TEXT POLISH
+   ========================= */
+
+/* Base text */
+html.theme-dark body {
+  color: #e5e7eb; /* neutral readable gray */
+}
+
+/* Headings */
+html.theme-dark h1,
+html.theme-dark h2,
+html.theme-dark h3,
+html.theme-dark h4,
+html.theme-dark h5,
+html.theme-dark h6 {
+  color: #f9fafb;
+}
+
+/* Muted / helper text */
+html.theme-dark .text-muted,
+html.theme-dark .form-text,
+html.theme-dark .small,
+html.theme-dark small {
+  color: #9ca3af !important;
+}
+
+/* Card subtitles / descriptions */
+html.theme-dark .card-subtitle,
+html.theme-dark .card-text {
+  color: #cbd5e1;
+}
+
+/* Dashboard metric labels */
+html.theme-dark .card .text-uppercase,
+html.theme-dark .card .fw-semibold.text-muted {
+  color: #9ca3af !important;
+}
+
+/* Table secondary text */
+html.theme-dark .table .text-muted {
+  color: #9ca3af !important;
+}
+
+/* Links */
+html.theme-dark a {
+  color: #60a5fa;
+}
+html.theme-dark a:hover {
+  color: #93c5fd;
+}
+
+/* Icons (Bootstrap Icons inherit color) */
+html.theme-dark .bi {
+  color: inherit;
+}
+
+/* Divider / separators */
+html.theme-dark hr,
+html.theme-dark .dropdown-divider {
+  border-color: #374151;
+}
+
+html.theme-dark .card {
+  background: linear-gradient(180deg, #161b22, #11161c);
+}
