@@ -173,25 +173,69 @@ class UserEditForm(forms.ModelForm):
             self.fields["primary_mfa_method"].initial = getattr(user.profile, "primary_mfa_method", "totp")
             self.fields["email_fallback_enabled"].initial = getattr(user.profile, "email_fallback_enabled", True)
 
+    # ----------------------------
+    # IMPORTANT: save() now only saves NON-governance fields.
+    # Governance fields (role, is_active) are handled by services with guards.
+    # ----------------------------
     def save(self, commit=True):
-        user = super().save(commit=commit)
-        if hasattr(user, "profile"):
-            user.profile.role = self.cleaned_data["role"]
+        user = super().save(commit=False)  # email + is_active will be in user obj
+
+        # Only allow email to be saved here.
+        # is_active is governance; do NOT change it from form.save()
+        if self.instance is not None:
+            user.is_active = self.instance.is_active
+
+        if commit:
+            user.save(update_fields=["email"])
+
+        # Save profile fields that are NOT governance
+        self.save_profile_non_governance()
+
+        return user
+
+    def save_profile_non_governance(self):
+        user = self.instance
+        if user and hasattr(user, "profile"):
             user.profile.primary_mfa_method = self.cleaned_data["primary_mfa_method"]
             user.profile.email_fallback_enabled = self.cleaned_data["email_fallback_enabled"]
-            user.profile.save()
-        return user
+            user.profile.save(update_fields=["primary_mfa_method", "email_fallback_enabled", "updated_at"])
+
+    def proposed_role(self) -> str:
+        return self.cleaned_data.get("role")
+
+    def proposed_is_active(self) -> bool:
+        # NOTE: the form still captures is_active, but we will apply it via services.
+        return bool(self.cleaned_data.get("is_active"))
+
 
 class DistributorApplicationForm(forms.ModelForm):
     class Meta:
         model = DistributorApplication
         fields = ["full_name", "email", "mobile", "company_name", "location", "notes"]
+        widgets = {
+            "full_name": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control", "autocomplete": "email"}),
+            "mobile": forms.TextInput(attrs={"class": "form-control"}),
+            "company_name": forms.TextInput(attrs={"class": "form-control"}),
+            "location": forms.TextInput(attrs={"class": "form-control"}),
+            "notes": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
+        }
 
 
 class PortalPasswordResetForm(PasswordResetForm):
     """
     Fixes NoReverseMatch by generating reset URLs using the portal namespace.
     """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["email"].widget.attrs.update({
+            "class": "form-control",
+            "placeholder": "Enter your email",
+            "autocomplete": "email",
+        })
+
+
 
     def save(
         self,

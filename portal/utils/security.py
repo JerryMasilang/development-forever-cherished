@@ -1,17 +1,4 @@
 # portal/utils/security.py
-# from __future__ import annotations
-
-# import hashlib
-# import secrets
-# from typing import Iterable, List, Optional
-# from django.core.cache import cache
-# from django.utils import timezone
-# from portal.models import MFARecoveryCode, AuditLog
-# from django.core.mail import send_mail
-# from django.conf import settings
-# import time
-# from django.utils.timezone import now
-# from datetime import timedelta
 from __future__ import annotations
 
 import hashlib

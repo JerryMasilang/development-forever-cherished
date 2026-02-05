@@ -1,22 +1,67 @@
-{% extends "portal/base_auth.html" %} {% block content %}
-<div class="container py-5" style="max-width: 520px">
-  <h3 class="mb-2">Distributor Application</h3>
-  <p class="text-muted">
-    Submit details so the Admin can create your portal account.
-  </p>
+{% extends "portal/base_auth.html" %}
+{% block title %}Distributor Application{% endblock %}
 
-  <form method="post">
-    {% csrf_token %}
-    <div class="mb-2">Full Name {{ form.full_name }}</div>
-    <div class="mb-2">Email {{ form.email }}</div>
-    <div class="mb-2">Mobile {{ form.mobile }}</div>
-    <div class="mb-2">Company Name {{ form.company_name }}</div>
-    <div class="mb-2">Location {{ form.location }}</div>
-    <div class="mb-2">Notes {{ form.notes }}</div>
+{% block content %}
 
-    <button class="btn btn-success w-100 mt-3">Submit Application</button>
-  </form>
+<div class="card shadow-sm w-100" style="border-radius: 14px; max-width: 440px; margin: 0 auto;">
+  <div class="card-body p-3 p-md-4">
 
-  <div class="mt-3"><a href="{% url 'portal:login' %}">Back to login</a></div>
+    <div class="text-center mb-3">
+      <h4 class="mb-1">Distributor Application</h4>
+      <div class="text-muted small">
+        Submit details so the Admin can create your portal account.
+      </div>
+    </div>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-2">
+        <label class="form-label small mb-1" for="{{ form.full_name.id_for_label }}">Full Name</label>
+        {{ form.full_name }}
+        {% if form.full_name.errors %}<div class="text-danger small mt-1">{{ form.full_name.errors }}</div>{% endif %}
+      </div>
+
+      <div class="mb-2">
+        <label class="form-label small mb-1" for="{{ form.email.id_for_label }}">Email</label>
+        {{ form.email }}
+        {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors }}</div>{% endif %}
+      </div>
+
+      <div class="mb-2">
+        <label class="form-label small mb-1" for="{{ form.mobile.id_for_label }}">Mobile</label>
+        {{ form.mobile }}
+        {% if form.mobile.errors %}<div class="text-danger small mt-1">{{ form.mobile.errors }}</div>{% endif %}
+      </div>
+
+      <div class="mb-2">
+        <label class="form-label small mb-1" for="{{ form.company_name.id_for_label }}">Company Name</label>
+        {{ form.company_name }}
+        {% if form.company_name.errors %}<div class="text-danger small mt-1">{{ form.company_name.errors }}</div>{% endif %}
+      </div>
+
+      <div class="mb-2">
+        <label class="form-label small mb-1" for="{{ form.location.id_for_label }}">Location</label>
+        {{ form.location }}
+        {% if form.location.errors %}<div class="text-danger small mt-1">{{ form.location.errors }}</div>{% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label small mb-1" for="{{ form.notes.id_for_label }}">Notes</label>
+        {{ form.notes }}
+        {% if form.notes.errors %}<div class="text-danger small mt-1">{{ form.notes.errors }}</div>{% endif %}
+      </div>
+
+      <button class="btn btn-success w-100 py-2" type="submit">
+        Submit Application
+      </button>
+    </form>
+
+    <div class="text-center mt-3">
+      <a class="small" href="{% url 'portal:login' %}">Back to login</a>
+    </div>
+
+  </div>
 </div>
+
 {% endblock %}

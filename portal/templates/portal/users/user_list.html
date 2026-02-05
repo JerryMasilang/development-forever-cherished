@@ -27,8 +27,13 @@
         {% for u in users %}
         <tr>
           <td class="fw-semibold">{{ u.username }}</td>
-          <td>{{ u.email }}</td>
-          <td>{{ u.profile.role|default:"N/A" }}</td>
+          <td>{{ u.email }}</td> 
+          <td>
+            {{ u.profile.role|default:"N/A" }}
+            {% if u.profile.is_superadmin %}
+              <span class="badge bg-dark ms-2">SuperAdmin</span>
+            {% endif %}
+          </td>
           <td>
             {% if u.is_active %}
             <span class="badge bg-success">Active</span>
@@ -36,20 +41,30 @@
             <span class="badge bg-secondary">Inactive</span>
             {% endif %}
           </td>
+          
+
           <td class="text-end">
-            <a
-              class="btn btn-sm btn-outline-secondary"
-              href="{% url 'portal:users:user_edit' u.id %}"
-            >
-              <i class="bi bi-pencil"></i> Edit
-            </a>
-            <a
-              class="btn btn-sm btn-outline-danger"
-              href="{% url 'portal:users:user_reset_mfa' u.id %}"
-            >
-              <i class="bi bi-shield-lock"></i> Reset MFA
-            </a>
+            {% if u.profile.is_superadmin %}
+              <span class="btn btn-sm btn-outline-secondary disabled">N/A</span>
+            {% else %}
+              <a
+                class="btn btn-sm btn-outline-secondary"
+                href="{% url 'portal:users:user_edit' u.id %}"
+              >
+                <i class="bi bi-pencil"></i> Edit
+              </a>
+
+              <a
+                class="btn btn-sm btn-outline-danger"
+                href="{% url 'portal:users:user_reset_mfa' u.id %}"
+              >
+                <i class="bi bi-shield-lock"></i> Reset MFA
+              </a>
+            {% endif %}
           </td>
+
+
+
         </tr>
         {% empty %}
         <tr>

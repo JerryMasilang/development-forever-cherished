@@ -86,6 +86,41 @@ html.theme-dark .table > :not(caption) > * > * {
   border-color: #2b313a !important;
 }
 
+/* =========================
+   Fix table "square background" inside rounded cards
+   ========================= */
+
+/* Any card that contains a table should clip its contents */
+.card.table-card,
+.card .table-responsive {
+  border-radius: inherit;
+  overflow: hidden; /* ✅ this is the key */
+}
+
+/* Ensure the table itself doesn't fight the radius */
+.card .table {
+  margin-bottom: 0;
+}
+
+/* Make sure header row doesn't look like it has square corners */
+.card .table thead th {
+  border-top: 0;
+}
+
+/* If you use Bootstrap's .table-light, force it to respect dark theme too */
+html.theme-dark .table-light th {
+  background-color: #161b22 !important;
+  color: #e6e6e6 !important;
+}
+
+
+
+
+
+
+
+
+
 /* Inputs */
 html.theme-dark .form-control,
 html.theme-dark .form-select,
@@ -133,11 +168,11 @@ html.theme-dark h6 {
   color: #f9fafb;
 }
 
-/* Muted / helper text */
+/* Muted / helper text (dark theme) */
 html.theme-dark .text-muted,
 html.theme-dark .form-text,
-html.theme-dark .small,
-html.theme-dark small {
+html.theme-dark small,
+html.theme-dark .small.text-muted {
   color: #9ca3af !important;
 }
 
@@ -179,4 +214,130 @@ html.theme-dark .dropdown-divider {
 
 html.theme-dark .card {
   background: linear-gradient(180deg, #161b22, #11161c);
+}
+
+
+
+
+/* ================================
+   Form validation visibility (Dark Theme)
+   ================================ */
+
+.theme-dark .text-danger,
+.theme-dark .invalid-feedback,
+.theme-dark .errorlist,
+.theme-dark .errorlist li {
+    color: #ff6b6b !important;   /* readable red on dark bg */
+}
+
+/* Help / small text under inputs */
+.theme-dark .form-text,
+.theme-dark small.text-muted {
+    color: #cfd6dd !important;
+}
+
+/* Input border highlight on error */
+.theme-dark .is-invalid {
+    border-color: #ff6b6b !important;
+}
+
+/* Optional: subtle glow for focus + error */
+.theme-dark .is-invalid:focus {
+    box-shadow: 0 0 0 0.2rem rgba(255, 107, 107, 0.25);
+}
+
+.theme-dark label {
+    color: #e6e6e6;
+}
+
+
+/* ================================
+   Form validation visibility (Dark Theme)
+   ================================ */
+
+html.theme-dark .text-danger,
+html.theme-dark .text-danger *,
+html.theme-dark .invalid-feedback,
+html.theme-dark .errorlist,
+html.theme-dark .errorlist li {
+  color: #ff6b6b !important;
+}
+
+/* Input border highlight on error */
+html.theme-dark .is-invalid {
+  border-color: #ff6b6b !important;
+}
+
+html.theme-dark .is-invalid:focus {
+  box-shadow: 0 0 0 0.2rem rgba(255, 107, 107, 0.25);
+}
+
+
+/* =========================
+   Auth navbar polish (mobile + dark)
+   ========================= */
+
+.brand-title { color: #111; }
+.brand-subtitle { color: #6c757d; }
+
+/* When dark theme is active */
+html.theme-dark .brand-title { color: #f9fafb !important; }
+html.theme-dark .brand-subtitle { color: #cbd5e1 !important; }
+
+/* Make auth navbar content wrap nicely on small screens */
+@media (max-width: 576px) {
+  .navbar .container-fluid {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Put brand on its own row */
+  .navbar-brand {
+    width: 100%;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  /* Align email + logout nicely below */
+  .navbar .d-flex.align-items-center.gap-2 {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  /* Prevent long email from breaking layout */
+  .navbar .text-muted.small {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+
+html.theme-dark .navbar {
+  background-color: #161b22 !important;
+  color: #e6e6e6 !important;
+}
+
+
+/* =========================
+   Auth layout sizing (login/mfa/reset)
+   ========================= */
+
+.auth-shell {
+  min-height: calc(100vh - 56px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.auth-wrap {
+  max-width: 520px;
+}
+
+/* Desktop: slightly wider so it doesn't feel cramped */
+@media (min-width: 992px) {
+  .auth-wrap {
+    max-width: 560px;
+  }
 }

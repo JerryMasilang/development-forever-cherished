@@ -47,8 +47,27 @@ class UserProfile(models.Model):
     issued_prefix = models.CharField(max_length=16, blank=True, default="")
     issued_number = models.PositiveIntegerField(null=True, blank=True)
 
+
+    # Governance root
+    is_superadmin = models.BooleanField(default=False, db_index=True)
+
     # --- Security / MFA ---
     role = models.CharField(max_length=32, choices=ROLE_CHOICES, default=ROLE_DISTRIBUTOR)
+    # --- Security / MFA ---
+
+
+
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == self.ROLE_ADMIN
+
+    @property
+    def is_governance_admin(self) -> bool:
+        # Governance admin means the user can access admin-level UI,
+        # but only SuperAdmin can manage Admins.
+        return self.is_superadmin or self.role == self.ROLE_ADMIN
+
 
     primary_mfa_method = models.CharField(
         max_length=10,

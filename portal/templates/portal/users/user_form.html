@@ -69,6 +69,19 @@
           </div>
         {% endif %}
 
+        {% if mode == "edit" %}
+          <div class="mb-3">
+            <label class="form-label" for="reason">Reason (required)</label>
+            <textarea class="form-control" name="reason" id="reason" rows="3" required></textarea>
+            <div class="form-text">Required for role changes, deactivation, or any governance action.</div>
+          </div>
+        {% endif %}
+        {% if mode == "edit" %}
+          <div class="mb-3">
+            <label class="form-label" for="reason">Reason (required for role change/deactivation)</label>
+            <textarea class="form-control" name="reason" id="reason" rows="3"></textarea>
+          </div>
+        {% endif %}
         <button type="submit" class="btn btn-success w-100 py-2">
           {% if mode == "create" %}Create User{% else %}Save Changes{% endif %}
         </button>

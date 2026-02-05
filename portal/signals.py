@@ -33,14 +33,29 @@ def _next_issued_number(prefix: str) -> int:
 
 @receiver(post_save, sender=User)
 def ensure_profile(sender, instance, created, **kwargs):
+    """
+    Ensure every user has exactly one profile.
+    Enforce safe defaults (SuperAdmin is never implicit).
+    Also issues a stable portal ID once at creation.
+    """
     if created:
-        profile = UserProfile.objects.create(user=instance)
+        profile = UserProfile.objects.create(
+            user=instance,
+            is_superadmin=False,  # 🔒 explicit safe default
+        )
 
         # Issue a stable portal ID once (based on initial role)
         prefix = ROLE_PREFIX_MAP.get(profile.role, "USER")
         profile.issued_prefix = prefix
         profile.issued_number = _next_issued_number(prefix)
         profile.save(update_fields=["issued_prefix", "issued_number"])
+        return
+
+    # Not created: ensure profile exists for legacy accounts
+    UserProfile.objects.get_or_create(
+        user=instance,
+        defaults={"is_superadmin": False},
+    )
 
 
 @receiver(pre_save, sender=User)
@@ -100,3 +115,5 @@ def mark_session_ended_on_logout(sender, request, user, **kwargs):
         session_key=session_key,
         ended_at__isnull=True
     ).update(ended_at=timezone.now())
+
+

@@ -1,10 +1,20 @@
 {% load static %}
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="{% if request.user.is_authenticated %}{{ request.user.profile.theme_preference|default:'system' }}{% else %}system{% endif %}">
+
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}QR Portal{% endblock %} | Forever Cherished</title>
+    <script>
+      (function () {
+        var root = document.documentElement;
+        var theme = root.getAttribute("data-theme") || "system";
+        var isDark = (theme === "dark") || (theme === "system" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (isDark) root.classList.add("theme-dark");
+        else root.classList.remove("theme-dark");
+      })();
+    </script>
 
     <!-- Bootstrap -->
     <link
@@ -15,17 +25,23 @@
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
       rel="stylesheet"
     />
+    <link href="{% static 'portal/css/portal.css' %}" rel="stylesheet" />
+
   </head>
 
   <body class="bg-light">
     <!-- Minimal Navbar for Auth pages -->
-    <nav class="navbar navbar-light bg-white border-bottom">
+    <nav class="navbar border-bottom">
       <div
         class="container-fluid d-flex justify-content-between align-items-center"
       >
-        <span class="navbar-brand fw-semibold mb-0">
-          Forever Cherished <span class="text-muted">| QR Portal</span>
-        </span>
+
+      <span class="navbar-brand fw-semibold mb-0">
+        <span class="brand-title">Forever Cherished</span>
+        <span class="brand-subtitle">| QR Portal</span>
+      </span>
+
+
 
         {% if request.user.is_authenticated %}
         <div class="d-flex align-items-center gap-2">
@@ -45,11 +61,9 @@
     </nav>
 
     <!-- Page body -->
-    <main
-      class="d-flex justify-content-center align-items-center p-3"
-      style="min-height: calc(100vh - 56px)"
-    >
-      <div class="w-100" style="max-width: 520px">
+      <main class="auth-shell py-4 py-md-5">
+        <div class="auth-wrap w-100 px-3">
+
         <!-- ✅ Show Django messages ONCE for auth pages -->
         {% if messages %} {% for message in messages %}
         <div
