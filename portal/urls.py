@@ -100,9 +100,7 @@ urlpatterns = [
     path("qr/png/<str:qr_id>/", views.qr_png, name="qr_png"),
 
 
-    # -------------------------
-    # Profile / Settings
-    # -------------------------
+
 # -------------------------
 # Profile / Settings
 # -------------------------
@@ -110,9 +108,12 @@ urlpatterns = [
     path("settings/recovery-codes/", views_security.recovery_codes_generate, name="recovery_codes_generate"),
     path("settings/verify/", views_security.stepup_verify, name="stepup_verify"),
 
-    # Email change (querystring-based, approved flow)
+    # Email change
     path("settings/email/verify/", views_security.email_change_verify, name="email_change_verify"),
-    path("settings/email/confirm/", views_security.email_change_confirm, name="email_change_confirm"),
+    # path("settings/email/confirm/<str:token>/", views_security.email_change_confirm, name="email_change_confirm"),
+    path("settings/email/confirm/<path:token>/", views_security.email_change_confirm, name="email_change_confirm"),
+# ✅ NEW: ultra-short confirm URL to avoid quoted-printable wrapping
+    path("e/<slug:token>/", views_security.email_change_confirm, name="email_change_confirm_short"),
 
     # Audit feature module
     path("audit/", include(("portal.audit.urls", "audit"), namespace="audit")),

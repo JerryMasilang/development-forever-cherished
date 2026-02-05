@@ -31,6 +31,11 @@ class UserProfile(models.Model):
     email_change_token_used_at = models.DateTimeField(blank=True, null=True)
 
 
+    # Email change (store pending email so confirm URL can stay short and never wrap)
+    email_change_pending_email = models.EmailField(blank=True, null=True)
+    email_change_requested_at = models.DateTimeField(null=True, blank=True)
+
+
     # --- Identity / Baseline profile ---
     display_name = models.CharField(max_length=120, blank=True, default="")
     contact_number = models.CharField(max_length=30, blank=True, default="")
