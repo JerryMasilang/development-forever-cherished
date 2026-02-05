@@ -13,10 +13,47 @@
     <form method="post" novalidate>
       {% csrf_token %}
       {% if form.non_field_errors %}
-        <div class="alert alert-danger">
-          {{ form.non_field_errors }}
-        </div>
+        {% for err in form.non_field_errors %}
+
+          {% with msg=err|stringformat:"s" %}
+            {% if "suspended" in msg|lower %}
+              <div class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+                <i class="bi bi-shield-lock-fill fs-5"></i>
+                <div>
+                  <div class="fw-semibold">Account Suspended</div>
+                  <div>{{ err }}</div>
+                </div>
+              </div>
+
+            {% elif "pending" in msg|lower %}
+              <div class="alert alert-warning d-flex align-items-start gap-2" role="alert">
+                <i class="bi bi-hourglass-split fs-5"></i>
+                <div>
+                  <div class="fw-semibold">Account Pending</div>
+                  <div>{{ err }}</div>
+                </div>
+              </div>
+
+            {% elif "inactive" in msg|lower %}
+              <div class="alert alert-secondary d-flex align-items-start gap-2" role="alert">
+                <i class="bi bi-person-x-fill fs-5"></i>
+                <div>
+                  <div class="fw-semibold">Account Inactive</div>
+                  <div>{{ err }}</div>
+                </div>
+              </div>
+
+            {% else %}
+              <div class="alert alert-danger" role="alert">
+                {{ err }}
+              </div>
+            {% endif %}
+          {% endwith %}
+
+        {% endfor %}
       {% endif %}
+
+
 
       <div class="mb-3">
         <label class="form-label">Username</label>

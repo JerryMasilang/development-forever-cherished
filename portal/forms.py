@@ -13,11 +13,6 @@ from django.contrib.auth import authenticate
 from django.utils.html import format_html
 from .models import PasswordHistory, UserProfile
 
-# SYNC TEST: forms.py edited locally
-# SYNC TEST: forms.py edited locally
-# SYNC TEST: forms.py edited on GitHub
-# SYNC TEST: forms.py edited on GitHub
-
 
 User = get_user_model()
 
@@ -53,31 +48,36 @@ ROLE_CHOICES = [
 ]
 
 
-class PortalAuthenticationForm(AuthenticationForm):
-    def confirm_login_allowed(self, user):
-        """
-        Override Django default behavior.
-        This is where Django blocks inactive users.
-        """
-        if not user.is_active:
-            admin_email = getattr(
-                settings, "ADMIN_SUPPORT_EMAIL", "admin@yourdomain.com"
-            )
-            raise forms.ValidationError(
-                format_html(
-                    "Account disabled. Contact administrator: "
-                    '<a href="mailto:{0}">{0}</a>',
-                    admin_email,
-                ),
-                code="inactive",
-            )
 
-    def clean(self):
-        """
-        Let AuthenticationForm handle authentication flow.
-        We do NOT check is_active here anymore.
-        """
-        return super().clean()
+class PortalAuthenticationForm(AuthenticationForm):
+    """
+    Status-aware login messages.
+    Uses Django's is_active gate, but reads profile.account_status for
+    the correct user-facing reason.
+    """
+
+    error_messages = {
+        **AuthenticationForm.error_messages,
+        "inactive": "This account is inactive. Please contact your Administrator.",
+        "suspended": "This account is suspended. Please contact your Administrator.",
+        "pending": "This account is pending verification/approval.",
+    }
+
+    def confirm_login_allowed(self, user):
+        # Django default rule blocks inactive users; we override messaging.
+        if not getattr(user, "is_active", True):
+            profile = getattr(user, "profile", None)
+            status = getattr(profile, "account_status", "") if profile else ""
+
+            if status == "suspended":
+                raise ValidationError(self.error_messages["suspended"], code="inactive")
+            if status == "pending":
+                raise ValidationError(self.error_messages["pending"], code="inactive")
+
+            # default fallback (inactive or unknown)
+            raise ValidationError(self.error_messages["inactive"], code="inactive")
+
+        return super().confirm_login_allowed(user)
 
 
 class UserCreateForm(forms.ModelForm):
@@ -98,6 +98,37 @@ class UserCreateForm(forms.ModelForm):
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
 
+    def save(self, commit=True):
+        user = super().save(commit=False)
+
+        # ✅ set hashed password
+        user.set_password(self.cleaned_data["password1"])
+
+        if commit:
+            user.save()
+
+            # ✅ update profile values (signal should have created profile)
+            if hasattr(user, "profile"):
+                user.profile.role = self.cleaned_data["role"]
+                user.profile.primary_mfa_method = self.cleaned_data["primary_mfa_method"]
+                user.profile.email_fallback_enabled = self.cleaned_data["email_fallback_enabled"]
+
+                # ✅ PHASE 1: sync account_status with is_active
+                # (Requires you already added account_status + STATUS_* in UserProfile model)
+                if user.is_active:
+                    user.profile.account_status = UserProfile.STATUS_ACTIVE
+                    user.profile.suspended_at = None
+                    user.profile.suspended_reason = ""
+                else:
+                    user.profile.account_status = UserProfile.STATUS_INACTIVE
+                    user.profile.suspended_at = None
+                    user.profile.suspended_reason = ""
+
+                user.profile.save()
+
+        return user
+
+
     class Meta:
         model = User
         fields = ["username", "email", "is_active"]
@@ -108,8 +139,7 @@ class UserCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # is_active is part of ModelForm widgets; set it here
-        self.fields["is_active"].widget.attrs.update({"class": "form-check-input"})
+        self.fields["is_active"].initial = True
     def clean_password1(self):
         pwd = self.cleaned_data.get("password1")
         validate_password(pwd)
@@ -157,7 +187,7 @@ class UserEditForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ["email", "is_active"]
+        fields = ["email"]
         widgets = {
             "email": forms.EmailInput(attrs={"class": "form-control"}),
         }
@@ -165,8 +195,6 @@ class UserEditForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.get("instance")
         super().__init__(*args, **kwargs)
-
-        self.fields["is_active"].widget.attrs.update({"class": "form-check-input"})
 
         if user and hasattr(user, "profile"):
             self.fields["role"].initial = user.profile.role
@@ -180,10 +208,8 @@ class UserEditForm(forms.ModelForm):
     def save(self, commit=True):
         user = super().save(commit=False)  # email + is_active will be in user obj
 
-        # Only allow email to be saved here.
-        # is_active is governance; do NOT change it from form.save()
-        if self.instance is not None:
-            user.is_active = self.instance.is_active
+        # if self.instance is not None:
+        #     user.is_active = self.instance.is_active
 
         if commit:
             user.save(update_fields=["email"])
@@ -203,9 +229,9 @@ class UserEditForm(forms.ModelForm):
     def proposed_role(self) -> str:
         return self.cleaned_data.get("role")
 
-    def proposed_is_active(self) -> bool:
-        # NOTE: the form still captures is_active, but we will apply it via services.
-        return bool(self.cleaned_data.get("is_active"))
+    # def proposed_is_active(self) -> bool:
+    #     # NOTE: the form still captures is_active, but we will apply it via services.
+    #     return bool(self.cleaned_data.get("is_active"))
 
 
 class DistributorApplicationForm(forms.ModelForm):

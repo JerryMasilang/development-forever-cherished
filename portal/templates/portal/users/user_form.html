@@ -28,6 +28,13 @@
         </div>
 
         <div class="mb-3">
+          <label class="form-label">Account Status</label>
+          <div>
+            {% include "portal/partials/status_badge.html" with user=user_obj %}
+          </div>
+        </div>
+
+        <div class="mb-3">
           <label class="form-label" for="{{ form.role.id_for_label }}">Role</label>
           {{ form.role }}
           {% if form.role.errors %}<div class="text-danger small mt-1">{{ form.role.errors }}</div>{% endif %}
@@ -47,14 +54,6 @@
           {% if form.email_fallback_enabled.errors %}<div class="text-danger small mt-1">{{ form.email_fallback_enabled.errors }}</div>{% endif %}
         </div>
 
-        <div class="form-check mb-3">
-          {{ form.is_active }}
-          <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-            Active (uncheck to disable)
-          </label>
-          {% if form.is_active.errors %}<div class="text-danger small mt-1">{{ form.is_active.errors }}</div>{% endif %}
-        </div>
-
         {% if form.password1 %}
           <div class="mb-3">
             <label class="form-label" for="{{ form.password1.id_for_label }}">Password</label>
@@ -70,18 +69,28 @@
         {% endif %}
 
         {% if mode == "edit" %}
-          <div class="mb-3">
+          {% comment %} <div class="mb-3">
             <label class="form-label" for="reason">Reason (required)</label>
             <textarea class="form-control" name="reason" id="reason" rows="3" required></textarea>
-            <div class="form-text">Required for role changes, deactivation, or any governance action.</div>
-          </div>
+            <div class="form-text">Required for role changes and any governance action.</div>
+          </div> {% endcomment %}
         {% endif %}
         {% if mode == "edit" %}
           <div class="mb-3">
-            <label class="form-label" for="reason">Reason (required for role change/deactivation)</label>
-            <textarea class="form-control" name="reason" id="reason" rows="3"></textarea>
+            <label class="form-label" for="reason">Reason (required)</label>
+            <textarea
+              class="form-control"
+              name="reason"
+              id="reason"
+              rows="3"
+              required
+            ></textarea>
+            <div class="form-text">
+              Required for role changes and other governance actions.
+            </div>
           </div>
         {% endif %}
+
         <button type="submit" class="btn btn-success w-100 py-2">
           {% if mode == "create" %}Create User{% else %}Save Changes{% endif %}
         </button>

@@ -21,9 +21,9 @@
           <th>Role</th>
           <th>Status</th>
           <th class="text-end">Actions</th>
-        </tr>
+         </tr>
       </thead>
-      <tbody>
+      {% comment %} <tbody>
         {% for u in users %}
         <tr>
           <td class="fw-semibold">{{ u.username }}</td>
@@ -34,14 +34,27 @@
               <span class="badge bg-dark ms-2">SuperAdmin</span>
             {% endif %}
           </td>
+
+ <a class="btn btn-sm btn-outline-success" href="{% url 'portal:users:user_activate' u.id %}">Activate</a>
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'portal:users:user_deactivate' u.id %}">Deactivate</a>
+          <a class="btn btn-sm btn-outline-warning" href="{% url 'portal:users:user_set_pending' u.id %}">Pending</a>
+          <a class="btn btn-sm btn-outline-danger" href="{% url 'portal:users:user_suspend' u.id %}">Suspend</a>
+        
+
+
           <td>
-            {% if u.is_active %}
-            <span class="badge bg-success">Active</span>
+            {% if u.profile.account_status == "active" %}
+              <span class="badge bg-success">Active</span>
+            {% elif u.profile.account_status == "inactive" %}
+              <span class="badge bg-secondary">Inactive</span>
+            {% elif u.profile.account_status == "suspended" %}
+              <span class="badge bg-danger">Suspended</span>
+            {% elif u.profile.account_status == "pending" %}
+              <span class="badge bg-warning text-dark">Pending</span>
             {% else %}
-            <span class="badge bg-secondary">Inactive</span>
+              <span class="badge bg-light text-dark">Unknown</span>
             {% endif %}
-          </td>
-          
+          </td>         
 
           <td class="text-end">
             {% if u.profile.is_superadmin %}
@@ -73,7 +86,54 @@
           </td>
         </tr>
         {% endfor %}
-      </tbody>
+      </tbody> {% endcomment %}
+      <tbody>
+  {% for u in users %}
+  <tr>
+    <td class="fw-semibold">{{ u.username }}</td>
+    <td>{{ u.email }}</td>
+    <td>{{ u.profile.role|default:"N/A" }}</td>
+
+    <td>
+      {% if u.profile.account_status == "active" %}
+        <span class="badge bg-success">Active</span>
+      {% elif u.profile.account_status == "inactive" %}
+        <span class="badge bg-secondary">Inactive</span>
+      {% elif u.profile.account_status == "suspended" %}
+        <span class="badge bg-danger">Suspended</span>
+      {% elif u.profile.account_status == "pending" %}
+        <span class="badge bg-warning text-dark">Pending</span>
+      {% else %}
+        <span class="badge bg-light text-dark">Unknown</span>
+      {% endif %}
+    </td>
+
+    <td class="text-end">
+      {% if u.profile.is_superadmin %}
+        <span class="btn btn-sm btn-outline-secondary disabled">N/A</span>
+      {% else %}
+        <a class="btn btn-sm btn-outline-success" href="{% url 'portal:users:user_activate' u.id %}">Activate</a>
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'portal:users:user_deactivate' u.id %}">Deactivate</a>
+        <a class="btn btn-sm btn-outline-warning" href="{% url 'portal:users:user_set_pending' u.id %}">Pending</a>
+        <a class="btn btn-sm btn-outline-danger" href="{% url 'portal:users:user_suspend' u.id %}">Suspend</a>
+
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'portal:users:user_edit' u.id %}">
+          <i class="bi bi-pencil"></i> Edit
+        </a>
+        <a class="btn btn-sm btn-outline-danger" href="{% url 'portal:users:user_reset_mfa' u.id %}">
+          <i class="bi bi-shield-lock"></i> Reset MFA
+        </a>
+      {% endif %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="5" class="text-center text-muted py-4">No users found.</td>
+  </tr>
+  {% endfor %}
+</tbody>
+
+
     </table>
   </div>
 </div>

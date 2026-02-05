@@ -6,10 +6,6 @@ User = get_user_model()
 
 
 class EmailOrUsernameBackend(ModelBackend):
-    """
-    Login with email (preferred) or username.
-    We'll show the UI as "Email".
-    """
 
     def authenticate(self, request, username=None, password=None, **kwargs):
         if username is None or password is None:
@@ -22,7 +18,8 @@ class EmailOrUsernameBackend(ModelBackend):
         except User.DoesNotExist:
             return None
 
-        if user.check_password(password) and self.user_can_authenticate(user):
+        # if user.check_password(password) and self.user_can_authenticate(user):
+        if user.check_password(password):
             return user
         return None
 

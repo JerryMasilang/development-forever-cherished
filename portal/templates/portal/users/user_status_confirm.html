@@ -1,0 +1,35 @@
+{% extends "portal/base.html" %}
+{% block title %}{{ action_label }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h4 class="mb-2">{{ action_label }}</h4>
+        <p class="text-muted">{{ help_text }}</p>
+
+        <div class="mb-3">
+          <div><b>User:</b> {{ user_obj.username }}</div>
+          <div><b>Email:</b> {{ user_obj.email }}</div>
+        </div>
+
+        <form method="post">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label">Reason{% if reason_required %} (required){% endif %}</label>
+            <textarea name="reason" class="form-control" rows="3" {% if reason_required %}required{% endif %}></textarea>
+          </div>
+
+          <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary w-50" href="{% url 'portal:users:user_list' %}">Cancel</a>
+            <button class="btn btn-{{ action_color }} w-50" type="submit">{{ action_label }}</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

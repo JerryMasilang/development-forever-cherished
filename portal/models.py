@@ -26,6 +26,33 @@ class UserProfile(models.Model):
         (MFA_EMAIL, "Email OTP"),
     ]
 
+
+    # --- Account lifecycle ---
+    STATUS_ACTIVE = "active"
+    STATUS_INACTIVE = "inactive"
+    STATUS_SUSPENDED = "suspended"
+    STATUS_PENDING = "pending"
+
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_INACTIVE, "Inactive"),
+        (STATUS_SUSPENDED, "Suspended"),
+        (STATUS_PENDING, "Pending Verification"),
+    ]
+
+    account_status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_ACTIVE,
+        db_index=True,
+    )
+
+    suspended_at = models.DateTimeField(null=True, blank=True)
+    suspended_reason = models.CharField(max_length=255, blank=True, default="")
+
+    status_updated_at = models.DateTimeField(null=True, blank=True)
+
+
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
     email_change_token_jti = models.CharField(max_length=64, blank=True, null=True)
     email_change_token_used_at = models.DateTimeField(blank=True, null=True)

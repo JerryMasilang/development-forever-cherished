@@ -1,0 +1,13 @@
+{% with p=user.profile %}
+  {% if p.account_status == "active" %}
+    <span class="badge bg-success">Active</span>
+  {% elif p.account_status == "inactive" %}
+    <span class="badge bg-secondary">Inactive</span>
+  {% elif p.account_status == "pending" %}
+    <span class="badge bg-warning text-dark">Pending</span>
+  {% elif p.account_status == "suspended" %}
+    <span class="badge bg-danger">Suspended</span>
+  {% else %}
+    <span class="badge bg-light text-dark">Unknown</span>
+  {% endif %}
+{% endwith %}

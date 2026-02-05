@@ -17,6 +17,70 @@ from portal.models import UserProfile, AuditLog
 User = get_user_model()
 
 
+@transaction.atomic
+def set_account_status(*, actor, target, new_status: str, reason: str = ""):
+    prof = target.profile
+
+    if new_status not in dict(UserProfile.STATUS_CHOICES):
+        raise ValidationError("Invalid account status.")
+
+    # Enforce reason for governance actions (suspend/deactivate/pending)
+    requires_reason = new_status in {
+        UserProfile.STATUS_INACTIVE,
+        UserProfile.STATUS_SUSPENDED,
+        UserProfile.STATUS_PENDING,
+    }
+    if requires_reason and not (reason or "").strip():
+        raise ValidationError("Reason is required.")
+
+    prof.account_status = new_status
+    prof.status_updated_at = timezone.now()
+
+    # sync with Django auth gate
+    if new_status == UserProfile.STATUS_ACTIVE:
+        target.is_active = True
+        prof.suspended_at = None
+        prof.suspended_reason = ""
+        audit(None, "USER_ACTIVATED", target_user=target, reason=(reason or ""))
+
+    elif new_status == UserProfile.STATUS_INACTIVE:
+        target.is_active = False
+        prof.suspended_at = None
+        prof.suspended_reason = ""
+        audit(None, "USER_DEACTIVATED", target_user=target, reason=(reason or ""))
+
+    elif new_status == UserProfile.STATUS_PENDING:
+        target.is_active = False
+        prof.suspended_at = None
+        prof.suspended_reason = ""
+        audit(None, "USER_SET_PENDING", target_user=target, reason=(reason or ""))
+
+    elif new_status == UserProfile.STATUS_SUSPENDED:
+        target.is_active = False
+        prof.suspended_at = timezone.now()
+        prof.suspended_reason = (reason or "").strip()[:255]
+        audit(None, "USER_SUSPENDED", target_user=target, reason=prof.suspended_reason)
+
+    target.save(update_fields=["is_active"])
+    prof.save(update_fields=[
+        "account_status", "status_updated_at",
+        "suspended_at", "suspended_reason",
+    ])
+
+    # Also record actor-aware audit row (preferred)
+    audit_obj_reason = (reason or "")[:255]
+    from portal.models import AuditLog
+    AuditLog.objects.create(
+        actor=actor,
+        target_user=target,
+        action=f"USER_STATUS_{new_status.upper()}",
+        reason=audit_obj_reason,
+        meta={"new_status": new_status},
+    )
+
+
+
+
 def list_users():
     return User.objects.all().order_by("username")
 
