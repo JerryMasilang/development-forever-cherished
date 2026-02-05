@@ -1,0 +1,38 @@
+{% extends "portal/base.html" %}
+{% block title %}Reset Recovery Codes{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h4 class="mb-2">Reset Recovery Codes</h4>
+        <p class="text-muted">
+          This will delete all recovery codes for <b>{{ user_obj.username }}</b>.
+          They will need to generate new recovery codes after logging in.
+        </p>
+
+        <div class="mb-3">
+          <div><b>User:</b> {{ user_obj.username }}</div>
+          <div><b>Email:</b> {{ user_obj.email }}</div>
+        </div>
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Reason (required)</label>
+            <textarea name="reason" class="form-control" rows="3" required></textarea>
+            <div class="form-text">Required for security governance actions.</div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary w-50" href="{% url 'portal:users:user_list' %}">Cancel</a>
+            <button class="btn btn-danger w-50" type="submit">Reset Recovery Codes</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

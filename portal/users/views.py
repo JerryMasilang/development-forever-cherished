@@ -17,44 +17,6 @@ User = get_user_model()
 
 
 
-# def set_account_status(request, user, new_status: str, reason: str = ""):
-#     profile = user.profile
-#     profile.account_status = new_status
-#     profile.status_updated_at = timezone.now()
-
-#     if new_status == profile.STATUS_ACTIVE:
-#         user.is_active = True
-#         profile.suspended_at = None
-#         profile.suspended_reason = ""
-#         audit(request, "USER_ACTIVATED", target_user=user, reason=reason or "")
-#     elif new_status == profile.STATUS_INACTIVE:
-#         user.is_active = False
-#         profile.suspended_at = None
-#         profile.suspended_reason = ""
-#         audit(request, "USER_DEACTIVATED", target_user=user, reason=reason or "")
-#     elif new_status == profile.STATUS_PENDING:
-#         user.is_active = False
-#         profile.suspended_at = None
-#         profile.suspended_reason = ""
-#         audit(request, "USER_SET_PENDING", target_user=user, reason=reason or "")
-#     elif new_status == profile.STATUS_SUSPENDED:
-#         user.is_active = False
-#         profile.suspended_at = timezone.now()
-#         profile.suspended_reason = (reason or "").strip()[:255]
-#         audit(request, "USER_SUSPENDED", target_user=user, reason=profile.suspended_reason)
-#     else:
-#         raise ValueError("Invalid status")
-
-#     user.save(update_fields=["is_active"])
-#     profile.save(update_fields=[
-#         "account_status", "status_updated_at",
-#         "suspended_at", "suspended_reason",
-#     ])
-
-
-
-
-
 @admin_required
 def user_list(request):
     users = services.list_users()
@@ -93,15 +55,21 @@ def user_edit(request, user_id):
         if form.is_valid():
             try:
                 old_role = getattr(user_obj.profile, "role", None)
-                # old_active = bool(user_obj.is_active)
-
                 new_role = form.proposed_role() or old_role
-              
+
                 if new_role != old_role and not reason:
                     raise ValidationError("Reason is required for role changes.")
 
+                # Phase 2: if role changes, run governance service (guard + audit)
+                if new_role != old_role:
+                    services.change_user_role(
+                        actor=request.user,
+                        target=user_obj,
+                        new_role=new_role,
+                        reason=reason,
+                    )
 
-                # Save non-governance fields safely (email, mfa prefs)
+                # Save remaining non-governance fields
                 form.save()
 
                 messages.success(request, "User updated successfully.")
@@ -109,6 +77,7 @@ def user_edit(request, user_id):
 
             except (ValidationError, PermissionDenied) as e:
                 messages.error(request, str(e))
+
     else:
         form = UserEditForm(instance=user_obj)
 
@@ -133,22 +102,6 @@ def user_reset_mfa(request, user_id):
             messages.error(request, str(e))
 
     return render(request, "portal/users/user_reset_mfa_confirm.html", {"user_obj": user_obj})
-
-
-@admin_required
-def user_reset_recovery(request, user_id):
-    user_obj = get_object_or_404(User, id=user_id)
-
-    if request.method == "POST":
-        services.reset_user_recovery_codes(request, user_obj)
-        messages.success(request, f"Recovery codes reset for {user_obj.username}.")
-        return redirect("portal:users:user_list")
-
-    return render(
-        request,
-        "portal/users/user_reset_recovery_confirm.html",
-        {"user_obj": user_obj},
-    )
 
 
 from django.core.exceptions import ValidationError, PermissionDenied
@@ -244,3 +197,29 @@ def user_set_pending(request, user_id):
         "help_text": "Pending blocks login until activated by an admin.",
         "reason_required": True,
     })
+
+
+
+
+@admin_required
+def user_reset_recovery(request, user_id):
+    user_obj = get_object_or_404(User, id=user_id)
+
+    if request.method == "POST":
+        reason = (request.POST.get("reason") or "").strip()
+        try:
+            services.reset_user_recovery_codes(
+                actor=request.user,
+                target=user_obj,
+                reason=reason,
+            )
+            messages.success(request, f"Recovery codes reset for {user_obj.username}.")
+            return redirect("portal:users:user_list")
+        except (ValidationError, PermissionDenied) as e:
+            messages.error(request, str(e))
+
+    return render(
+        request,
+        "portal/users/user_reset_recovery_confirm.html",
+        {"user_obj": user_obj},
+    )

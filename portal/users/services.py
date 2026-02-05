@@ -19,12 +19,17 @@ User = get_user_model()
 
 @transaction.atomic
 def set_account_status(*, actor, target, new_status: str, reason: str = ""):
+    # Phase 2: guard FIRST (prevents last-admin lockout + superadmin/admin protections)
+    guard_governance_action(
+        actor=actor,
+        target=target,
+        action=GOV_ACTION_STATUS,
+        new_status=new_status,
+    )
+
     prof = target.profile
 
-    if new_status not in dict(UserProfile.STATUS_CHOICES):
-        raise ValidationError("Invalid account status.")
-
-    # Enforce reason for governance actions (suspend/deactivate/pending)
+    # Reason enforcement (keep your existing rule)
     requires_reason = new_status in {
         UserProfile.STATUS_INACTIVE,
         UserProfile.STATUS_SUSPENDED,
@@ -36,30 +41,25 @@ def set_account_status(*, actor, target, new_status: str, reason: str = ""):
     prof.account_status = new_status
     prof.status_updated_at = timezone.now()
 
-    # sync with Django auth gate
     if new_status == UserProfile.STATUS_ACTIVE:
         target.is_active = True
         prof.suspended_at = None
         prof.suspended_reason = ""
-        audit(None, "USER_ACTIVATED", target_user=target, reason=(reason or ""))
 
     elif new_status == UserProfile.STATUS_INACTIVE:
         target.is_active = False
         prof.suspended_at = None
         prof.suspended_reason = ""
-        audit(None, "USER_DEACTIVATED", target_user=target, reason=(reason or ""))
 
     elif new_status == UserProfile.STATUS_PENDING:
         target.is_active = False
         prof.suspended_at = None
         prof.suspended_reason = ""
-        audit(None, "USER_SET_PENDING", target_user=target, reason=(reason or ""))
 
     elif new_status == UserProfile.STATUS_SUSPENDED:
         target.is_active = False
         prof.suspended_at = timezone.now()
         prof.suspended_reason = (reason or "").strip()[:255]
-        audit(None, "USER_SUSPENDED", target_user=target, reason=prof.suspended_reason)
 
     target.save(update_fields=["is_active"])
     prof.save(update_fields=[
@@ -67,17 +67,13 @@ def set_account_status(*, actor, target, new_status: str, reason: str = ""):
         "suspended_at", "suspended_reason",
     ])
 
-    # Also record actor-aware audit row (preferred)
-    audit_obj_reason = (reason or "")[:255]
-    from portal.models import AuditLog
     AuditLog.objects.create(
         actor=actor,
         target_user=target,
         action=f"USER_STATUS_{new_status.upper()}",
-        reason=audit_obj_reason,
-        meta={"new_status": new_status},
+        reason=(reason or "")[:255],
+        meta={"new_status": new_status, "target_role": _role(target)},
     )
-
 
 
 
@@ -94,21 +90,6 @@ def create_user(form):
 
 def update_user(form):
     return form.save()
-
-
-def reset_user_mfa(user_obj):
-    """
-    Deletes all TOTP devices so user must re-enroll on next login.
-    """
-    TOTPDevice.objects.filter(user=user_obj).delete()
-
-
-def reset_user_recovery_codes(request, user_obj):
-    """
-    Deletes recovery codes and writes audit log.
-    """
-    MFARecoveryCode.objects.filter(user=user_obj).delete()
-    audit(request, "RESET_RECOVERY_CODES", target_user=user_obj)
 
 
 def _profile(user):
@@ -138,6 +119,93 @@ def _ensure_single_superadmin(new_superadmin_user: User):
     if existing.exists():
         raise ValidationError("A SuperAdmin already exists. Only one SuperAdmin is allowed.")
 
+
+
+
+# portal/users/services.py
+from django.core.exceptions import PermissionDenied, ValidationError
+
+GOV_ACTION_STATUS = "STATUS_CHANGE"
+GOV_ACTION_ROLE = "ROLE_CHANGE"
+GOV_ACTION_MFA_RESET = "MFA_RESET"
+GOV_ACTION_RECOVERY_RESET = "RECOVERY_RESET"
+
+def _is_governance_admin(user) -> bool:
+    p = _profile(user)
+    return bool(p and (p.is_superadmin or p.role == UserProfile.ROLE_ADMIN))
+
+def log_blocked_governance_attempt(*, actor: User, target: User, action: str, message: str, meta=None):
+    # Optional but very useful
+    AuditLog.objects.create(
+        actor=actor,
+        target_user=target,
+        action="GOV_BLOCKED",
+        reason=message[:255],
+        meta={"attempted_action": action, **(meta or {})},
+    )
+
+def guard_governance_action(
+    *,
+    actor: User,
+    target: User,
+    action: str,
+    new_status: str | None = None,
+    new_role: str | None = None,
+):
+    actor_p = _profile(actor)
+    target_p = _profile(target)
+
+    if not actor_p or not target_p:
+        raise PermissionDenied("Profile missing.")
+
+    actor_is_super = bool(actor_p.is_superadmin)
+    target_is_super = bool(target_p.is_superadmin)
+    target_is_admin = (target_p.role == UserProfile.ROLE_ADMIN)
+
+    # 1) No self-governance actions
+    if actor.id == target.id:
+        raise PermissionDenied("You cannot perform governance actions on your own account.")
+
+    # 2) Nobody can modify SuperAdmin
+    if target_is_super:
+        raise PermissionDenied("SuperAdmin account cannot be modified.")
+
+    # 3) Only SuperAdmin can manage Administrators (any governance action)
+    if target_is_admin and not actor_is_super:
+        raise PermissionDenied("Only SuperAdmin can manage Administrator accounts.")
+
+    # 4) Role assignment protection (Admin role is SuperAdmin-only)
+    if action == GOV_ACTION_ROLE:
+        if not new_role:
+            raise ValidationError("new_role is required.")
+        if new_role not in dict(UserProfile.ROLE_CHOICES):
+            raise ValidationError("Invalid role.")
+
+        # If changing to/from Administrator, only SuperAdmin may do it
+        if (target_p.role == UserProfile.ROLE_ADMIN) or (new_role == UserProfile.ROLE_ADMIN):
+            if not actor_is_super:
+                raise PermissionDenied("Only SuperAdmin can assign or change Administrator roles.")
+
+        # Prevent “last admin” lockout via role change (strongly recommended)
+        if target_p.role == UserProfile.ROLE_ADMIN and new_role != UserProfile.ROLE_ADMIN:
+            if _count_active_admins(exclude_user_id=target.id) == 0:
+                raise ValidationError("You cannot remove the last remaining Administrator.")
+
+    # 5) Status change protection + last admin lockout
+    if action == GOV_ACTION_STATUS:
+        if not new_status:
+            raise ValidationError("new_status is required.")
+        if new_status not in dict(UserProfile.STATUS_CHOICES):
+            raise ValidationError("Invalid account status.")
+
+        # Prevent last active admin from being suspended/deactivated/pending
+        if target_is_admin and new_status in {
+            UserProfile.STATUS_INACTIVE,
+            UserProfile.STATUS_SUSPENDED,
+            UserProfile.STATUS_PENDING,
+        }:
+            if _count_active_admins(exclude_user_id=target.id) == 0:
+                raise ValidationError("You cannot disable the last remaining Administrator.")
 
 
 
@@ -213,7 +281,8 @@ def change_user_role(*, actor: User, target: User, new_role: str, reason: str):
 def reset_user_mfa(*, actor: User, target: User, reason: str):
     if not reason or not reason.strip():
         raise ValidationError("Reason is required.")
-    guard_user_admin_action(actor=actor, target=target, action="MFA_RESET")
+
+    guard_governance_action(actor=actor, target=target, action=GOV_ACTION_MFA_RESET)
 
     TOTPDevice.objects.filter(user=target).delete()
 
@@ -225,11 +294,11 @@ def reset_user_mfa(*, actor: User, target: User, reason: str):
         meta={"target_role": _role(target)},
     )
 
-
 def reset_user_recovery_codes(*, actor: User, target: User, reason: str):
     if not reason or not reason.strip():
         raise ValidationError("Reason is required.")
-    guard_user_admin_action(actor=actor, target=target, action="RESET_RECOVERY_CODES")
+
+    guard_governance_action(actor=actor, target=target, action=GOV_ACTION_RECOVERY_RESET)
 
     MFARecoveryCode.objects.filter(user=target).delete()
 
@@ -240,3 +309,7 @@ def reset_user_recovery_codes(*, actor: User, target: User, reason: str):
         reason=reason[:255],
         meta={"target_role": _role(target)},
     )
+
+
+
+
